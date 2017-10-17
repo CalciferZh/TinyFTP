@@ -1,0 +1,49 @@
+1. We can view the server as a middleware, which recieves messages from one 
+client and send to another. The server should assign two different ports to 
+the two clients to distinguish them.
+
+2. Theoretically we can use UDP to transfer a file. Suppose A wants to send 
+a file to B. We can seperate the procedure to the following steps:
+
+  1. A tells B how large the file is.
+
+  2. B echos A how large the file is, to verify B has received A's message.
+
+  3. A sends B the file in packets.
+
+     In each packet, A shoudld also tell B the offset of the data in this
+     packet. According to the offset and the size of each packet, B is able to
+     detect a packet loss.
+
+     Each time B detects a packet loss, which means the packet that B has just
+     received is discontinuous from the data B received before, B should send a
+     message to A, telling A what the offset is supposed to be. If in a long
+     time B hasn't received any packets from A, B should also tells A the
+     offset.
+
+     Whenever A receives a message from B, A turn back to the given offset and
+     start re-sending data from there. A should continually send packets to B,
+     until receives any message from B.
+
+  4. When B receives all the file, it should tell A. And the connection can be
+     closed.
+
+Then we will analysis why this mechanism works.
+
+If some packets lost in step 1 or step 2, the file transfer will not start at
+all.
+
+If some packets from A to B lost in step 3, B will tell A and make A turn back
+to re-send the lost packets. If the packet from B to A also lost, since A will
+continue sending B packets, which are all discontinuous in the view of B, B
+will repeatedly send packet-loss-message to A. If A receives none of them, B 
+can turn off the tranmisson after some time and raise a failure. Otherwise, 
+A will turn back and re-send the left data to B.
+
+One possible problem is, for example, due to some magic delay, B receives
+packets in the order of Packet_1, Packet_3, and Packet_2. When B received
+Packet_3, B will tell A that Packet_2 was lost, but later B finally received
+Packet_2. In this case, B can simply plug Packet_2 in. If A received B's
+packet-loss-message, A will re-send Packet_2 and Packet_3, and B can discard
+them; if A didn't receie B's packet-loss-message, the file transfer can also
+run as normal.
