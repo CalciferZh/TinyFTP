@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <unistd.h>     /* defines STDIN_FILENO, system calls,etc */
 #include <sys/types.h>  /* system data type definitions */
@@ -14,9 +15,18 @@ void uppercase(char *p) {
   for ( ; *p; ++p) *p = toupper(*p);
 }
 
+void insert_cnt(char *p, int cnt) {
+  char buf[MAXBUF];
+  sprintf(buf, "%d ", cnt);
+  strcat(buf, p);
+  strcpy(p, buf);
+}
+
 void echo(int sd) {
     char bufin[MAXBUF];
     struct sockaddr_in remote;
+
+    int cnt = 0;
 
     /* need to know how big address struct is, len must be set before the
        call to recvfrom!!! */
@@ -29,9 +39,10 @@ void echo(int sd) {
       if (n < 0) {
         perror("Error receiving data");
       } else {
-        uppercase(bufin);
+        // uppercase(bufin);
+        insert_cnt(bufin, cnt++);
         /* Got something, just send it back */
-        sendto(sd, bufin, n, 0, (struct sockaddr *)&remote, len);
+        sendto(sd, bufin, strlen(bufin), 0, (struct sockaddr *)&remote, len);
       }
     }
 }
