@@ -19,6 +19,7 @@ void insert_cnt(char *p, int cnt) {
   char buf[MAXBUF];
   sprintf(buf, "%d ", cnt);
   strcat(buf, p);
+  memset(p, 0, sizeof(p));
   strcpy(p, buf);
 }
 
@@ -34,8 +35,8 @@ void echo(int sd) {
 
     while (1) {
       /* read a datagram from the socket (put result in bufin) */
+      memset(bufin, 0, sizeof(bufin));
       int n = recvfrom(sd, bufin, MAXBUF, 0, (struct sockaddr *) &remote, &len);
-
       if (n < 0) {
         perror("Error receiving data");
       } else {
