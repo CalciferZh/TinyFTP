@@ -15,6 +15,8 @@ int main(int argc, char **argv) {
 	int len;
 	int p;
 
+	// AF_INET: IPv4
+	// SOCK_STREAM, IPPROTO_TCP: tcp
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
 		return 1;
@@ -23,6 +25,8 @@ int main(int argc, char **argv) {
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = 6789;
+
+	// translate the decimal IP address to binary
 	if (inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr) <= 0) {
 		printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
 		return 1;
