@@ -9,6 +9,8 @@
 #include <memory.h>
 #include <stdio.h>
 
+#include "utils.h"
+
 int main(int argc, char **argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
@@ -23,7 +25,6 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	// addr.sin_port = 6789;
 	addr.sin_port = htons(6789);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -45,42 +46,13 @@ int main(int argc, char **argv) {
 			printf("Connection accepted.\n");
 		}
 		
-		p = 0;
-		while (1) {
-			int n = read(connfd, sentence + p, 8191 - p);
-			if (n < 0) {
-				printf("Error read(): %s(%d)\n", strerror(errno), errno);
-				close(connfd);
-				continue;
-			} else if (n == 0) {
-				break;
-			} else {
-				p += n;
-				if (sentence[p - 1] == '\n') {
-					break;
-				}
-			}
-		}
-
-		sentence[p - 1] = '\0';
-		len = p - 1;
+		len = read_msg(connfd, sentence);
 		
 		for (p = 0; p < len; p++) {
 			sentence[p] = toupper(sentence[p]);
 		}
 
-		p = 0;
-		while (p < len) {
-			int n = write(connfd, sentence + p, len + 1 - p);
-			if (n < 0) {
-				printf("Error write(): %s(%d)\n", strerror(errno), errno);
-				return 1;
-	 		} else {
-				p += n;
-			}			
-		}
-
-		printf("%s\n", sentence);
+		send_msg(connfd, sentence, strlen(sentence));
 
 		close(connfd);
 	}

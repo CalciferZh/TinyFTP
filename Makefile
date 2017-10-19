@@ -1,11 +1,12 @@
 all: client_app server_app
 
-client_app: ./client/client.c
-	gcc ./client/client.c -o client_app
+client_app:
+	cd ./client/ && make
 
-server_app: ./server/server.c
-	gcc ./server/server.c -o server_app
+server_app:
+	cd ./server/ && make
 
 clean:
-	rm -rf client_app server_app
+	cd ./client/ && make clean
+	cd ./server/ && make clean
 
