@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = 6789;
+	// addr.sin_port = 6789;
+	addr.sin_port = htons(6789);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
@@ -40,6 +41,8 @@ int main(int argc, char **argv) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
 			continue;
+		} else {
+			printf("Connection accepted.\n");
 		}
 		
 		p = 0;
@@ -76,6 +79,8 @@ int main(int argc, char **argv) {
 				p += n;
 			}			
 		}
+
+		printf("%s\n", sentence);
 
 		close(connfd);
 	}
