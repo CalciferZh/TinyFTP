@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = 6789;
+	addr.sin_port = htons(6789);
 
 	// translate the decimal IP address to binary
 	if (inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr) <= 0) {
