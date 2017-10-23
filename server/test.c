@@ -15,7 +15,7 @@ void split_command_test()
 {
   char message[] = "USER Calcifer";
   char command[16] = "";
-  char command_truth[] = "USER";
+  char command_truth[] = "user";
   char content[128] = "";
   char content_truth[] = "Calcifer";
   split_command(message, command, content);

@@ -44,7 +44,7 @@ void str_lower(char* str)
   int p = 0;
   int len = strlen(str);
   for (p = 0; p < len; p++) {
-    str[p] = toupper(str[p]);
+    str[p] = tolower(str[p]);
   }
 }
 
@@ -111,10 +111,6 @@ int serve(int connfd)
   char content[4096];
 
   send_msg(connfd, RES_READY);
-
-  // write(connfd, RES_READY, strlen(RES_READY));
-
-
   // expecting user
   while (len = read_msg(connfd, message)) {
     printf("%s\n", message);
