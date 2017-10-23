@@ -14,9 +14,6 @@
 int main(int argc, char **argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
-	char sentence[8192];
-	int p;
-	int len;
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
@@ -44,13 +41,8 @@ int main(int argc, char **argv) {
 			continue;
 		} else {
 			printf("Connection accepted.\n");
-			send_msg(connfd, hello);
+			serve(connfd);
 		}
-		
-		len = read_msg(connfd, RESPONSE_HELLO);
-		printf("%s\n", sentence);
-
-		close(connfd);
 	}
 
 	close(listenfd);

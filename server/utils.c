@@ -16,7 +16,7 @@ int send_msg(int connfd, char* message)
   int p = 0;
   int len = strlen(message);
   while (p < len) {
-    int n = write(connfd, message + p, len + 1 - p);
+    int n = write(connfd, message + p, len - p);
     if (n < 0) {
       printf("Error write(): %s(%d)\n", strerror(errno), errno);
       return -1;
@@ -29,24 +29,14 @@ int send_msg(int connfd, char* message)
 
 int read_msg(int connfd, char* message)
 {
-    int p = 0;
-    while (1) {
-      int n = read(connfd, message + p, 8191 - p);
-      if (n < 0) {
-        printf("Error read(): %s(%d)\n", strerror(errno), errno);
-        close(connfd);
-        return -1;
-      } else if (n == 0) {
-        break;
-      } else {
-        p += n;
-      }
-    }
-    if (message[p - 1] != '\0') {
-      message[p] = '\0';
-      p += 1;
-    }
-    return p;
+  int n = read(connfd, message, 8191);
+  if (n < 0) {
+    printf("Error read(): %s(%d)\n", strerror(errno), errno);
+    close(connfd);
+    return -1;
+  }
+  message[n] = '\0';
+  return n;
 }
 
 void str_lower(char* str)
@@ -70,7 +60,7 @@ void split_command(char* message, char* command, char* content)
 
   // printf("\n%d\n", (int)(blank - message));
   strncpy(command, message, (int)(blank - message));
-  command[strlen(command)] = '\0';
+  command[(int)(blank - message)] = '\0';
   // printf("%s\n", command);
   
   strcpy(content, blank + 1);
@@ -93,3 +83,50 @@ int parse_command(char* message, char* content)
 
   return ret;
 }
+
+int handle_command(char* message)
+{
+  char content[128];
+  int code = parse_command(message, content);
+  int ret = 0;
+  switch (code) {
+    case USER_CODE:
+      if (strcmp(content, USER_NAME) == 0){
+
+      }
+      break;
+    default:
+      ret = -1;
+      break;
+  }
+  return ret;
+}
+
+int serve(int connfd)
+{
+  int ret_code = 0;
+  int c_code = 0;
+  int len = 0;
+  char message[4096];
+  char content[4096];
+
+  send_msg(connfd, RES_READY);
+
+  // write(connfd, RES_READY, strlen(RES_READY));
+
+
+  // expecting user
+  while (len = read_msg(connfd, message)) {
+    printf("%s\n", message);
+    c_code = parse_command(message, content);
+    if (c_code != USER_CODE) {
+      send_msg(connfd, RES_WANTUSER);
+    } else {
+      break;
+    }
+  }
+
+  close(connfd);
+  return ret_code;
+}
+
