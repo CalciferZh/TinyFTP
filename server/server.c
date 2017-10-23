@@ -44,15 +44,11 @@ int main(int argc, char **argv) {
 			continue;
 		} else {
 			printf("Connection accepted.\n");
+			send_msg(connfd, hello);
 		}
 		
-		len = read_msg(connfd, sentence);
-		
-		for (p = 0; p < len; p++) {
-			sentence[p] = toupper(sentence[p]);
-		}
-
-		send_msg(connfd, sentence, strlen(sentence));
+		len = read_msg(connfd, RESPONSE_HELLO);
+		printf("%s\n", sentence);
 
 		close(connfd);
 	}
