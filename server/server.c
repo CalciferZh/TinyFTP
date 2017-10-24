@@ -8,6 +8,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "utils.h"
 
@@ -22,7 +23,7 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(6789);
+	addr.sin_port = htons(atoi(argv[1]));
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
@@ -40,8 +41,11 @@ int main(int argc, char **argv) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
 			continue;
 		} else {
-			printf("Connection accepted.\n");
-			serve(connfd);
+			if (fork() == 0) {
+				printf("Connection accepted.\n");
+			} else {
+				serve(connfd);				
+			}
 		}
 	}
 
