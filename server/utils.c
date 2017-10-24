@@ -81,6 +81,9 @@ int parse_command(char* message, char* content)
   else if(strcmp(command, XPWD_COMMAND) == 0) {
     ret = XPWD_CODE;
   }
+  else if(strcmp(command, QUIT_COMMAND) == 0) {
+    ret = QUIT_CODE;
+  }
   else {
     printf("Unknown command: %s\n", command);
   }
@@ -187,6 +190,11 @@ int serve(int connfd)
         } else {
           send_msg(connfd, RES_ACCEPT_USER);
         }
+        break;
+
+      case QUIT_CODE:
+        close(connfd);
+        return ret_code;
         break;
 
       default:

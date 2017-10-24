@@ -1,10 +1,12 @@
 #define USER_CODE 0
 #define PASS_CODE 1
 #define XPWD_CODE 2
+#define QUIT_CODE 3
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
 #define XPWD_COMMAND "xpwd"
+#define QUIT_COMMAND "quit"
 
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
