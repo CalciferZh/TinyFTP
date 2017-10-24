@@ -14,7 +14,6 @@
 
 int main(int argc, char **argv) {
 	int listenfd, connfd;
-	int pid;
 	struct sockaddr_in addr;
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
@@ -42,18 +41,16 @@ int main(int argc, char **argv) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
 			continue;
 		} else {
-			if ((pid = fork()) == 0) {
+			if (fork() == 0) {
 				printf("Connection accepted.\n");
 			} else {
-				serve(connfd);				
+				serve(connfd);
+				return 0;
 			}
 		}
 	}
 
-	if (pid == 0) {
-		close(listenfd);
-	}
-
+	close(listenfd);
 	return 0;
 }
 
