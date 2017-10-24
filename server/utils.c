@@ -50,21 +50,16 @@ void str_lower(char* str)
 
 void split_command(char* message, char* command, char* content)
 {
-  // printf("%s\n", message);
   char* blank = strchr(message, ' ');
 
-  // char* p = message;
-  // while(p != blank) {
-  //   putchar(*(p++));
-  // }
-
-  // printf("\n%d\n", (int)(blank - message));
-  strncpy(command, message, (int)(blank - message));
-  command[(int)(blank - message)] = '\0';
-  // printf("%s\n", command);
-  
-  strcpy(content, blank + 1);
-  // printf("%s\n", content);
+  if (blank != NULL) {
+    strncpy(command, message, (int)(blank - message));
+    command[(int)(blank - message)] = '\0';
+    strcpy(content, blank + 1);
+  } else {
+    strcpy(command, message);
+    content[0] = '\0';
+  }
 }
 
 int parse_command(char* message, char* content)
@@ -77,29 +72,60 @@ int parse_command(char* message, char* content)
 
   if (strcmp(command, USER_COMMAND) == 0) {
     ret = USER_CODE;
-  } else {
+  } 
+  else if(strcmp(command, PASS_COMMAND) == 0 ||
+          strcmp(command, XPWD_COMMAND) == 0) {
+    ret = PASS_CODE;
+  }
+  else {
     printf("Unknown command: %s\n", command);
   }
 
   return ret;
 }
 
-int handle_command(char* message)
+void strip_crlf(char* str)
 {
-  char content[128];
-  int code = parse_command(message, content);
-  int ret = 0;
-  switch (code) {
-    case USER_CODE:
-      if (strcmp(content, USER_NAME) == 0){
-
-      }
-      break;
-    default:
-      ret = -1;
-      break;
+  int len = strlen(str);
+  if (str[len - 2] == '\n' || str[len - 2] == '\r') {
+    str[len - 2] = '\0';
+    if (str[len - 2] == '\n' || str[len - 2] == '\r') {
+      str[len - 3] = '\0';
+    }
   }
+}
+
+int command_user(int connfd, char* uname)
+{
+  int ret = 0;
+  if (strcmp(uname, "anonymous") == 0) {
+    send_msg(connfd, RES_ACCEPT_USER);
+    ret = 1;
+  } else {
+    send_msg(connfd, RES_REJECT_USER);
+  }
+
   return ret;
+}
+
+int command_pass(int connfd, char* pwd)
+{
+  int ret = 0;
+
+  if (strcmp(pwd, "some_password") == 0) {
+    send_msg(connfd, RES_ACCEPT_PASS);
+    ret = 1;
+  } else {
+    send_msg(connfd, RES_REJECT_PASS);
+  }
+
+  return ret;
+}
+
+int command_unknown(int connfd)
+{
+  send_msg(connfd, RES_UNKNOWN);
+  return 0;
 }
 
 int serve(int connfd)
@@ -107,18 +133,53 @@ int serve(int connfd)
   int ret_code = 0;
   int c_code = 0;
   int len = 0;
+  int logged = 0;
   char message[4096];
   char content[4096];
 
+  // to implement the strange feature
+  // which requires PASS follows USER
+  int want_pwd = 0;
+
   send_msg(connfd, RES_READY);
-  // expecting user
-  while (len = read_msg(connfd, message)) {
+
+  // loop routine
+  while ((len = read_msg(connfd, message))) {
+    strip_crlf(message);
     printf("%s\n", message);
     c_code = parse_command(message, content);
-    if (c_code != USER_CODE) {
+
+    if (!logged && c_code != USER_CODE) {
       send_msg(connfd, RES_WANTUSER);
-    } else {
-      break;
+      continue;
+    }
+    else if (logged && want_pwd && c_code != PASS_CODE) {
+      send_msg(connfd, RES_WANTPASS);
+      continue;
+    }
+
+    switch (c_code) {
+      case USER_CODE:
+        logged = command_user(connfd, content);
+        want_pwd = logged;
+        break;
+
+      case PASS_CODE:
+        if (!want_pwd) {
+          send_msg(connfd, RES_WANTUSER);
+        } else {
+          if (command_pass(connfd, content)) {
+            send_msg(connfd, RES_ACCEPT_PASS);
+            want_pwd = 0;
+          } else {
+            send_msg(connfd, RES_REJECT_PASS);
+          }
+        }
+        break;
+
+      default:
+        command_unknown(connfd);
+        break;
     }
   }
 
