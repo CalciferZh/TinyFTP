@@ -2,11 +2,14 @@
 #define PASS_CODE 1
 #define XPWD_CODE 2
 #define QUIT_CODE 3
+#define PORT_CODE 4
+
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
 #define XPWD_COMMAND "xpwd"
 #define QUIT_COMMAND "quit"
+#define PORT_COMMAND "port"
 
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
@@ -46,6 +49,10 @@ void strip_crlf(char* uname);
 int command_pass(int connfd, char* pwd);
 
 int command_unknown(int connfd);
+
+int command_port(int connfd);
+
+int command_quit(int connfd);
 
 int serve(int connfd);
 

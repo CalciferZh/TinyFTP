@@ -75,14 +75,17 @@ int parse_command(char* message, char* content)
   if (strcmp(command, USER_COMMAND) == 0) {
     ret = USER_CODE;
   } 
-  else if(strcmp(command, PASS_COMMAND) == 0) {
+  else if (strcmp(command, PASS_COMMAND) == 0) {
     ret = PASS_CODE;
   }
-  else if(strcmp(command, XPWD_COMMAND) == 0) {
+  else if (strcmp(command, XPWD_COMMAND) == 0) {
     ret = XPWD_CODE;
   }
-  else if(strcmp(command, QUIT_COMMAND) == 0) {
+  else if (strcmp(command, QUIT_COMMAND) == 0) {
     ret = QUIT_CODE;
+  }
+  else if (strcmp(command, PORT_COMMAND) == 0) {
+    ret = PORT_CODE;
   }
   else {
     printf("Unknown command: %s\n", command);
@@ -135,6 +138,18 @@ int command_unknown(int connfd)
   return 0;
 }
 
+int command_port(int connfd)
+{
+  return 0;
+}
+
+int command_quit(int connfd)
+{
+  send_msg(connfd, RES_CLOSE);
+  close(connfd);
+  return 0;
+}
+
 int serve(int connfd)
 {
   int ret_code = 0;
@@ -180,9 +195,12 @@ int serve(int connfd)
         break;
 
       case QUIT_CODE:
-        send_msg(connfd, RES_CLOSE);
-        close(connfd);
+        command_quit(connfd);
         return ret_code;
+        break;
+
+      case PORT_CODE:
+        command_port(connfd);
         break;
 
       default:
