@@ -1,4 +1,5 @@
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include <unistd.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define USER_CODE 0
 #define PASS_CODE 1
@@ -15,13 +17,11 @@
 #define QUIT_CODE 3
 #define PORT_CODE 4
 
-
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
 #define XPWD_COMMAND "xpwd"
 #define QUIT_COMMAND "quit"
 #define PORT_COMMAND "port"
-
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -33,6 +33,9 @@
 #define RES_WANTPASS           "500 Command PASS is expected.\r\n"
 #define RES_ACCEPT_PASS        "220 Password accepted.\r\n"
 #define RES_REJECT_PASS        "503 Wrong password.\r\n"
+
+#define RES_ACCEPT_PORT        "200 PORT command successful.\r\n"
+#define RES_REJECT_PORT        "425 PORT command failed.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
 
@@ -47,10 +50,15 @@ int read_msg(int connfd, char* message);
 
 void str_lower(char* str);
 
+void str_replace(char* str, char src, char des);
+
 void split_command(char* message, char* command, char* content);
 
 // parse the command from client
 int parse_command(char* message, char* content);
+
+// parse ip address & port
+int parse_addr(char* content, char* ip_buf);
 
 int command_user(int connfd, char* uname);
 
@@ -61,7 +69,7 @@ int command_pass(int connfd, char* pwd);
 
 int command_unknown(int connfd);
 
-int command_port(int connfd, struct sockaddr_in* des);
+int command_port(int connfd, char* content, struct sockaddr_in* des);
 
 int command_quit(int connfd);
 

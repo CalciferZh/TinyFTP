@@ -15,7 +15,7 @@ void split_command_test()
 {
   char message[] = "USER Calcifer";
   char command[16] = "";
-  char command_truth[] = "user";
+  char command_truth[] = "USER";
   char content[128] = "";
   char content_truth[] = "Calcifer";
   split_command(message, command, content);
@@ -38,10 +38,26 @@ void split_command_test()
   }
 }
 
+void parse_addr_test()
+{
+  char content[] = "166,111,81,14,215,10";
+  char ip[64] = "";
+  int port = parse_addr(content, ip);
+
+  if (strcmp(ip, "166.111.81.14") != 0) {
+    printf("Parse addr test: wrong ip addr:%s\n", ip);
+  } else if (port != 55050) {
+    printf("Parse addr test: wrong port:%d\n", port);
+  } else {
+    printf("Parse addr test passed.\n");
+  }
+}
+
 int main()
 {
   printf("================================================================\n");
   split_command_test();
+  parse_addr_test();
   return 0;
 }
 

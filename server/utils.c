@@ -37,6 +37,19 @@ void str_lower(char* str)
   }
 }
 
+void str_replace(char* str, char src, char des)
+{
+  char* p = str;
+  while (1) {
+    p = strchr(p, src);
+    if (p) {
+      *p = des;
+    } else {
+      break;
+    }
+  }
+}
+
 void split_command(char* message, char* command, char* content)
 {
   char* blank = strchr(message, ' ');
@@ -83,12 +96,47 @@ int parse_command(char* message, char* content)
   return ret;
 }
 
+int parse_addr(char* content, char* ip)
+{
+  str_replace(content, ',', '.');
+
+  int i = 0;
+  char* dot = content;
+  for (i = 0; i < 4; ++i) {
+    dot = strchr(++dot, '.');
+  }
+
+  // retrieve ip address
+  strncpy(ip, content, (int)(dot - content));
+  strcat(ip, "\0");
+
+  // retrieve port 1
+  ++dot;
+  char* dot2 = strchr(dot, '.');
+  char buf[32];
+  strncpy(buf, dot, (int)(dot2 - dot));
+  strcat(buf, "\0");
+  int p1 = atoi(buf);
+
+  //retrieve port 2
+  int p2 = atoi(strcpy(buf, dot2 + 1));
+
+  return (p1 * 256 + p2);
+  // return 0;
+}
+
 void strip_crlf(char* str)
 {
   int len = strlen(str);
+  if (len < 2) {
+    return;
+  }
   if (str[len - 2] == '\n' || str[len - 2] == '\r') {
     str[len - 2] = '\0';
-    if (str[len - 2] == '\n' || str[len - 2] == '\r') {
+    if (len < 3) {
+      return;
+    }
+    if (str[len - 3] == '\n' || str[len - 3] == '\r') {
       str[len - 3] = '\0';
     }
   }
@@ -127,9 +175,45 @@ int command_unknown(int connfd)
   return 0;
 }
 
-int command_port(int connfd, struct sockaddr_in* des)
+int command_port(int connfd, char* content, struct sockaddr_in* addr)
 {
-  return 0;
+  int ret;
+
+  int datafd;
+  if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
+    printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+    ret = -1;
+  }
+
+  if (!strlen(content)) {
+    send_msg(connfd, RES_ACCEPT_PORT);
+    return datafd;
+  }
+
+  char ip[64];
+  int port = parse_addr(content, ip);
+  memset(addr, 0, sizeof(*addr));
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(port);
+
+  // translate the decimal IP address to binary
+  if (inet_pton(AF_INET, ip, &(addr->sin_addr)) <= 0) {
+    printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
+    ret = -1;
+  }
+
+  // if (connect(datafd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
+  //   printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+  //   ret = -1;
+  // }
+
+  if (ret == -1) {
+    send_msg(connfd, RES_REJECT_PORT);
+  } else {
+    send_msg(connfd, RES_ACCEPT_PORT);
+  }
+
+  return datafd;
 }
 
 int command_quit(int connfd)
@@ -147,7 +231,8 @@ int serve(int connfd)
   int logged = 0;
   char message[4096];
   char content[4096];
-  struct sockaddr_in des;
+  int datafd;
+  struct sockaddr_in addr;
 
   send_msg(connfd, RES_READY);
 
@@ -190,7 +275,7 @@ int serve(int connfd)
         break;
 
       case PORT_CODE:
-        command_port(connfd, &des);
+        datafd = command_port(connfd, content, &addr);
         break;
 
       default:
