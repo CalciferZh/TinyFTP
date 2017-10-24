@@ -66,6 +66,8 @@ int parse_command(char* message, char* content)
 {
   char command[16]; // actually all commands are 4 bytes or less
   split_command(message, command, content);
+  strip_crlf(command);
+  strip_crlf(content);
   str_lower(command);
 
   int ret = -1;
@@ -73,9 +75,11 @@ int parse_command(char* message, char* content)
   if (strcmp(command, USER_COMMAND) == 0) {
     ret = USER_CODE;
   } 
-  else if(strcmp(command, PASS_COMMAND) == 0 ||
-          strcmp(command, XPWD_COMMAND) == 0) {
+  else if(strcmp(command, PASS_COMMAND) == 0) {
     ret = PASS_CODE;
+  }
+  else if(strcmp(command, XPWD_COMMAND) == 0) {
+    ret = XPWD_CODE;
   }
   else {
     printf("Unknown command: %s\n", command);
@@ -98,7 +102,7 @@ void strip_crlf(char* str)
 int command_user(int connfd, char* uname)
 {
   int ret = 0;
-  if (strcmp(uname, "anonymous") == 0) {
+  if (strcmp(uname, USER_NAME) == 0) {
     send_msg(connfd, RES_ACCEPT_USER);
     ret = 1;
   } else {
@@ -112,7 +116,7 @@ int command_pass(int connfd, char* pwd)
 {
   int ret = 0;
 
-  if (strcmp(pwd, "some_password") == 0) {
+  if (strcmp(pwd, PASSWORD) == 0) {
     send_msg(connfd, RES_ACCEPT_PASS);
     ret = 1;
   } else {
@@ -145,15 +149,15 @@ int serve(int connfd)
 
   // loop routine
   while ((len = read_msg(connfd, message))) {
-    strip_crlf(message);
-    printf("%s\n", message);
+    printf("%s", message);
     c_code = parse_command(message, content);
 
     if (!logged && c_code != USER_CODE) {
       send_msg(connfd, RES_WANTUSER);
       continue;
     }
-    else if (logged && want_pwd && c_code != PASS_CODE) {
+    else if (logged && want_pwd &&
+             c_code != PASS_CODE && c_code != XPWD_CODE) {
       send_msg(connfd, RES_WANTPASS);
       continue;
     }
@@ -174,6 +178,14 @@ int serve(int connfd)
           } else {
             send_msg(connfd, RES_REJECT_PASS);
           }
+        }
+        break;
+
+      case XPWD_CODE:
+        if (!want_pwd) {
+          send_msg(connfd, RES_WANTUSER);
+        } else {
+          send_msg(connfd, RES_ACCEPT_USER);
         }
         break;
 

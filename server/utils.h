@@ -1,5 +1,6 @@
 #define USER_CODE 0
 #define PASS_CODE 1
+#define XPWD_CODE 2
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -10,7 +11,7 @@
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
 
 #define RES_WANTUSER           "500 Command USER is expected.\r\n"
-#define RES_ACCEPT_USER        "220 User accepted.\r\n"
+#define RES_ACCEPT_USER        "331 Please enter password.\r\n"
 #define RES_REJECT_USER        "503 Unknown user.\r\n"
 
 #define RES_WANTPASS           "500 Command PASS is expected.\r\n"
@@ -18,7 +19,8 @@
 #define RES_REJECT_PASS        "503 Wrong password.\r\n"
 
 
-#define USER_NAME "anonymous"
+#define USER_NAME              "anonymous"
+#define PASSWORD               "some_password"
 
 // a secured method to send message
 int send_msg(int connfd, char* message);
