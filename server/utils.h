@@ -20,6 +20,7 @@
 #define RES_ACCEPT_PASS        "220 Password accepted.\r\n"
 #define RES_REJECT_PASS        "503 Wrong password.\r\n"
 
+#define RES_CLOSE              "421 Bye.\r\n"
 
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"

@@ -144,10 +144,6 @@ int serve(int connfd)
   char message[4096];
   char content[4096];
 
-  // to implement the strange feature
-  // which requires PASS follows USER
-  int want_pwd = 0;
-
   send_msg(connfd, RES_READY);
 
   // loop routine
@@ -155,44 +151,36 @@ int serve(int connfd)
     printf("%s", message);
     c_code = parse_command(message, content);
 
-    if (!logged && c_code != USER_CODE) {
+    if (!logged && c_code != USER_CODE && c_code != PASS_CODE) {
       send_msg(connfd, RES_WANTUSER);
       continue;
     }
-    else if (logged && want_pwd &&
-             c_code != PASS_CODE && c_code != XPWD_CODE) {
-      send_msg(connfd, RES_WANTPASS);
-      continue;
-    }
+    // else if (logged && want_pwd &&
+    //          c_code != PASS_CODE && c_code != XPWD_CODE) {
+    //   send_msg(connfd, RES_WANTPASS);
+    //   continue;
+    // }
 
     switch (c_code) {
       case USER_CODE:
-        logged = command_user(connfd, content);
-        want_pwd = logged;
+        command_user(connfd, content);
         break;
 
       case PASS_CODE:
-        if (!want_pwd) {
-          send_msg(connfd, RES_WANTUSER);
+        if (command_pass(connfd, content)) {
+          send_msg(connfd, RES_ACCEPT_PASS);
+          logged = 1;
         } else {
-          if (command_pass(connfd, content)) {
-            send_msg(connfd, RES_ACCEPT_PASS);
-            want_pwd = 0;
-          } else {
-            send_msg(connfd, RES_REJECT_PASS);
-          }
+          send_msg(connfd, RES_REJECT_PASS);
         }
         break;
 
       case XPWD_CODE:
-        if (!want_pwd) {
-          send_msg(connfd, RES_WANTUSER);
-        } else {
-          send_msg(connfd, RES_ACCEPT_USER);
-        }
+        send_msg(connfd, RES_WANTUSER);
         break;
 
       case QUIT_CODE:
+        send_msg(connfd, RES_CLOSE);
         close(connfd);
         return ret_code;
         break;
