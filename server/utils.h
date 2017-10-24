@@ -1,3 +1,14 @@
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#include <unistd.h>
+#include <errno.h>
+
+#include <ctype.h>
+#include <string.h>
+#include <memory.h>
+#include <stdio.h>
+
 #define USER_CODE 0
 #define PASS_CODE 1
 #define XPWD_CODE 2
@@ -50,7 +61,7 @@ int command_pass(int connfd, char* pwd);
 
 int command_unknown(int connfd);
 
-int command_port(int connfd);
+int command_port(int connfd, struct sockaddr_in* des);
 
 int command_quit(int connfd);
 

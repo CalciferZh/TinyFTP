@@ -1,16 +1,5 @@
 #include "utils.h"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <unistd.h>
-#include <errno.h>
-
-#include <ctype.h>
-#include <string.h>
-#include <memory.h>
-#include <stdio.h>
-
 int send_msg(int connfd, char* message)
 {
   int p = 0;
@@ -138,7 +127,7 @@ int command_unknown(int connfd)
   return 0;
 }
 
-int command_port(int connfd)
+int command_port(int connfd, struct sockaddr_in* des)
 {
   return 0;
 }
@@ -158,6 +147,7 @@ int serve(int connfd)
   int logged = 0;
   char message[4096];
   char content[4096];
+  struct sockaddr_in des;
 
   send_msg(connfd, RES_READY);
 
@@ -200,7 +190,7 @@ int serve(int connfd)
         break;
 
       case PORT_CODE:
-        command_port(connfd);
+        command_port(connfd, &des);
         break;
 
       default:
