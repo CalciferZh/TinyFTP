@@ -16,12 +16,14 @@
 #define XPWD_CODE 2
 #define QUIT_CODE 3
 #define PORT_CODE 4
+#define PASV_CODE 5
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
 #define XPWD_COMMAND "xpwd"
 #define QUIT_COMMAND "quit"
 #define PORT_COMMAND "port"
+#define PASV_COMMAND "pass"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -38,6 +40,9 @@
 #define RES_REJECT_PORT        "425 PORT command failed.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
+
+#define PORT_MODE 0
+#define PASV_MODE 1
 
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"

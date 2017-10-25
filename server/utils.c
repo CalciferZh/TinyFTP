@@ -197,7 +197,7 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
   addr->sin_port = htons(port);
 
   // translate the decimal IP address to binary
-  if (inet_pton(AF_INET, ip, &(addr->sin_addr)) <= 0) {
+  if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
     printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
     ret = -1;
   }
@@ -232,6 +232,7 @@ int serve(int connfd)
   char message[4096];
   char content[4096];
   int datafd;
+  int trans_mode = PORT_CODE;
   struct sockaddr_in addr;
 
   send_msg(connfd, RES_READY);
@@ -276,6 +277,9 @@ int serve(int connfd)
 
       case PORT_CODE:
         datafd = command_port(connfd, content, &addr);
+        if (datafd != -1) {
+          trans_mode = PORT_MODE;
+        }
         break;
 
       default:
