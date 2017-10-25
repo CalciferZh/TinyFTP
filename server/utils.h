@@ -1,10 +1,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <unistd.h>
 #include <errno.h>
-
 #include <ctype.h>
 #include <string.h>
 #include <memory.h>
@@ -76,9 +76,14 @@ int command_unknown(int connfd);
 
 int command_port(int connfd, char* content, struct sockaddr_in* des);
 
+int command_pasv(int connfd, struct sockaddr_in* des);
+
 int command_quit(int connfd);
 
-int serve(int connfd);
+// reference: http://blog.csdn.net/Timsley/article/details/51062342
+int get_local_ip(int sock, char* buf);
+
+int serve(int connfd, char* hip);
 
 
 

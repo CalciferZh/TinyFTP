@@ -15,6 +15,7 @@
 int main(int argc, char **argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
+	char hip[32] = "";
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
@@ -36,6 +37,9 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	get_local_ip(listenfd, hip);
+	printf("host ip address(eth0): %s\n", hip);
+
 	while (1) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
@@ -44,7 +48,7 @@ int main(int argc, char **argv) {
 			if (fork() == 0) {
 				printf("Connection accepted.\n");
 			} else {
-				serve(connfd);
+				serve(connfd, hip);
 				return 0;
 			}
 		}

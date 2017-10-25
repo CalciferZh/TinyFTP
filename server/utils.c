@@ -89,6 +89,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, PORT_COMMAND) == 0) {
     ret = PORT_CODE;
   }
+  else if (strcmp(command, PASV_COMMAND) == 0) {
+    ret = PASV_CODE;
+  }
   else {
     printf("Unknown command: %s\n", command);
   }
@@ -216,6 +219,44 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
   return datafd;
 }
 
+int command_pasv(int connfd, struct sockaddr_in* des)
+{
+  return 0;
+  // int ret;
+
+  // int datafd;
+  // if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
+  //   printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+  //   ret = -1;
+  // }
+
+
+
+
+  // memset(addr, 0, sizeof(*addr));
+  // addr->sin_family = AF_INET;
+  // addr->sin_port = htons(port);
+
+  // // translate the decimal IP address to binary
+  // if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
+  //   printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
+  //   ret = -1;
+  // }
+
+  // // if (connect(datafd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
+  // //   printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+  // //   ret = -1;
+  // // }
+
+  // if (ret == -1) {
+  //   send_msg(connfd, RES_REJECT_PORT);
+  // } else {
+  //   send_msg(connfd, RES_ACCEPT_PORT);
+  // }
+
+  // return datafd;
+}
+
 int command_quit(int connfd)
 {
   send_msg(connfd, RES_CLOSE);
@@ -223,7 +264,31 @@ int command_quit(int connfd)
   return 0;
 }
 
-int serve(int connfd)
+int get_local_ip(int sock, char* buf)
+{
+  // char *temp = NULL;
+  // struct ifreq ifr;
+  // char ifname[] = "eth0";
+
+  // memset(ifr.ifr_name, 0, sizeof(ifr.ifr_name));
+  // memcpy(ifr.ifr_name, ifname, strlen(ifname));
+
+  // if((0 != ioctl(sock, SIOCGIFADDR, &ifr)))
+  // {   
+  //   perror("ioctl error");
+  //   return -1;
+  // }
+
+  // temp = inet_ntoa(((struct sockaddr_in*)&(ifr.ifr_addr))->sin_addr);     
+  // memcpy(buf, temp, strlen(temp));
+
+  memcpy(buf, "123.206.56.140", strlen("123.206.56.140"));
+
+  return 0;
+}
+
+
+int serve(int connfd, char* hip)
 {
   int ret_code = 0;
   int c_code = 0;
@@ -279,6 +344,13 @@ int serve(int connfd)
         datafd = command_port(connfd, content, &addr);
         if (datafd != -1) {
           trans_mode = PORT_MODE;
+        }
+        break;
+
+      case PASV_CODE:
+        datafd = command_pasv(connfd, &addr);
+        if (datafd != -1) {
+          trans_mode = PASV_MODE;
         }
         break;
 
