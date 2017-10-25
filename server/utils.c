@@ -180,14 +180,15 @@ int command_unknown(int connfd)
 
 int command_port(int connfd, char* content, struct sockaddr_in* addr)
 {
-  int ret;
-
+  // create socket
   int datafd;
   if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
     printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-    ret = -1;
+    send_msg(connfd, RES_REJECT_PORT);
+    return -1;
   }
 
+  // check
   if (!strlen(content)) {
     send_msg(connfd, RES_ACCEPT_PORT);
     return datafd;
@@ -202,7 +203,8 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
   // translate the decimal IP address to binary
   if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
     printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
-    ret = -1;
+    send_msg(connfd, RES_REJECT_PORT);
+    return -1;
   }
 
   // if (connect(datafd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
@@ -210,51 +212,47 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
   //   ret = -1;
   // }
 
-  if (ret == -1) {
-    send_msg(connfd, RES_REJECT_PORT);
-  } else {
-    send_msg(connfd, RES_ACCEPT_PORT);
-  }
-
+  send_msg(connfd, RES_ACCEPT_PORT);
   return datafd;
 }
 
-int command_pasv(int connfd, struct sockaddr_in* des)
+int command_pasv(int connfd, char* hip, struct sockaddr_in* addr)
 {
-  return 0;
-  // int ret;
+  int datafd;
+  if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
+    printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+    send_msg(connfd, RES_REJECT_PASV);
+    return -1;
+  }
 
-  // int datafd;
-  // if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
-  //   printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-  //   ret = -1;
-  // }
+  int p1, p2;
+  int port = get_random_port(&p1, &p2);
 
+  memset(addr, 0, sizeof(*addr));
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(port);
+  addr->sin_addr.s_addr = htonl(INADDR_ANY);
 
+  if (bind(datafd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
+    printf("Error bind(): %s(%d)\n", strerror(errno), errno);
+    send_msg(connfd, RES_REJECT_PASV);
+    return -1;
+  }
 
+  if (listen(datafd, 10) == -1) {
+    printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+    send_msg(connfd, RES_REJECT_PASV);
+    return -1;
+  }
 
-  // memset(addr, 0, sizeof(*addr));
-  // addr->sin_family = AF_INET;
-  // addr->sin_port = htons(port);
+  char hip_cp[32] = "";
+  strcpy(hip_cp, hip);
+  str_replace(hip_cp, '.', ',');
+  char buffer[32] = "";
+  sprintf(buffer, RES_ACCEPT_PASV, hip_cp, p1, p2);
+  send_msg(connfd, buffer);
 
-  // // translate the decimal IP address to binary
-  // if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
-  //   printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
-  //   ret = -1;
-  // }
-
-  // // if (connect(datafd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
-  // //   printf("Error connect(): %s(%d)\n", strerror(errno), errno);
-  // //   ret = -1;
-  // // }
-
-  // if (ret == -1) {
-  //   send_msg(connfd, RES_REJECT_PORT);
-  // } else {
-  //   send_msg(connfd, RES_ACCEPT_PORT);
-  // }
-
-  // return datafd;
+  return datafd;
 }
 
 int command_quit(int connfd)
@@ -287,80 +285,13 @@ int get_local_ip(int sock, char* buf)
   return 0;
 }
 
-
-int serve(int connfd, char* hip)
+int get_random_port(int* p1, int* p2)
 {
-  int ret_code = 0;
-  int c_code = 0;
-  int len = 0;
-  int logged = 0;
-  char message[4096];
-  char content[4096];
-  int datafd;
-  int trans_mode = PORT_CODE;
-  struct sockaddr_in addr;
-
-  send_msg(connfd, RES_READY);
-
-  // loop routine
-  while ((len = read_msg(connfd, message))) {
-    printf("%s", message);
-    c_code = parse_command(message, content);
-
-    if (!logged && c_code != USER_CODE && c_code != PASS_CODE) {
-      send_msg(connfd, RES_WANTUSER);
-      continue;
-    }
-    // else if (logged && want_pwd &&
-    //          c_code != PASS_CODE && c_code != XPWD_CODE) {
-    //   send_msg(connfd, RES_WANTPASS);
-    //   continue;
-    // }
-
-    switch (c_code) {
-      case USER_CODE:
-        command_user(connfd, content);
-        break;
-
-      case PASS_CODE:
-        if (command_pass(connfd, content)) {
-          send_msg(connfd, RES_ACCEPT_PASS);
-          logged = 1;
-        } else {
-          send_msg(connfd, RES_REJECT_PASS);
-        }
-        break;
-
-      case XPWD_CODE:
-        send_msg(connfd, RES_WANTUSER);
-        break;
-
-      case QUIT_CODE:
-        command_quit(connfd);
-        return ret_code;
-        break;
-
-      case PORT_CODE:
-        datafd = command_port(connfd, content, &addr);
-        if (datafd != -1) {
-          trans_mode = PORT_MODE;
-        }
-        break;
-
-      case PASV_CODE:
-        datafd = command_pasv(connfd, &addr);
-        if (datafd != -1) {
-          trans_mode = PASV_MODE;
-        }
-        break;
-
-      default:
-        command_unknown(connfd);
-        break;
-    }
-  }
-
-  close(connfd);
-  return ret_code;
+  int port = rand() % (65535 - 20000) + 20000;
+  *p1 = port / 256;
+  *p2 = port % 256;
+  return port;
 }
+
+
 

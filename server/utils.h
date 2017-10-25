@@ -23,7 +23,7 @@
 #define XPWD_COMMAND "xpwd"
 #define QUIT_COMMAND "quit"
 #define PORT_COMMAND "port"
-#define PASV_COMMAND "pass"
+#define PASV_COMMAND "pasv"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -38,6 +38,9 @@
 
 #define RES_ACCEPT_PORT        "200 PORT command successful.\r\n"
 #define RES_REJECT_PORT        "425 PORT command failed.\r\n"
+
+#define RES_ACCEPT_PASV        "227 =%s,%d,%d\r\n"
+#define RES_REJECT_PASV        "425 PASV command failed.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
 
@@ -74,16 +77,16 @@ int command_pass(int connfd, char* pwd);
 
 int command_unknown(int connfd);
 
-int command_port(int connfd, char* content, struct sockaddr_in* des);
+int command_port(int connfd, char* content, struct sockaddr_in* addr);
 
-int command_pasv(int connfd, struct sockaddr_in* des);
+int command_pasv(int connfd, char* hip, struct sockaddr_in* addr);
 
 int command_quit(int connfd);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);
 
-int serve(int connfd, char* hip);
+int get_random_port(int* p1, int* p2);
 
 
 

@@ -12,10 +12,13 @@
 
 #include "utils.h"
 
+char hip[32] = "";
+
+int serve(int connfd);
+
 int main(int argc, char **argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
-	char hip[32] = "";
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
@@ -48,7 +51,7 @@ int main(int argc, char **argv) {
 			if (fork() == 0) {
 				printf("Connection accepted.\n");
 			} else {
-				serve(connfd, hip);
+				serve(connfd);
 				return 0;
 			}
 		}
@@ -58,3 +61,71 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+int serve(int connfd)
+{
+  int ret_code = 0;
+  int c_code = 0;
+  int len = 0;
+  int logged = 0;
+  char message[4096];
+  char content[4096];
+  int datafd;
+  struct sockaddr_in addr;
+
+  send_msg(connfd, RES_READY);
+
+  // loop routine
+  while ((len = read_msg(connfd, message))) {
+    printf("%s", message);
+    c_code = parse_command(message, content);
+
+    if (!logged && c_code != USER_CODE && c_code != PASS_CODE) {
+      send_msg(connfd, RES_WANTUSER);
+      continue;
+    }
+    // else if (logged && want_pwd &&
+    //          c_code != PASS_CODE && c_code != XPWD_CODE) {
+    //   send_msg(connfd, RES_WANTPASS);
+    //   continue;
+    // }
+
+    switch (c_code) {
+      case USER_CODE:
+        command_user(connfd, content);
+        break;
+
+      case PASS_CODE:
+        if (command_pass(connfd, content)) {
+          send_msg(connfd, RES_ACCEPT_PASS);
+          logged = 1;
+        } else {
+          send_msg(connfd, RES_REJECT_PASS);
+        }
+        break;
+
+      case XPWD_CODE:
+        send_msg(connfd, RES_WANTUSER);
+        break;
+
+      case QUIT_CODE:
+        command_quit(connfd);
+        return ret_code;
+        break;
+
+      case PORT_CODE:
+        datafd = command_port(connfd, content, &addr);
+        break;
+
+      case PASV_CODE:
+        datafd = command_pasv(connfd, hip, &addr);
+        break;
+
+      default:
+        command_unknown(connfd);
+        break;
+    }
+  }
+
+  close(connfd);
+  return ret_code;
+}
