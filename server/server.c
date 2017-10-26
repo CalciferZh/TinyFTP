@@ -13,6 +13,7 @@
 #include "utils.h"
 
 char hip[32] = "";
+int hport;
 
 int serve(int connfd);
 
@@ -27,7 +28,8 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(atoi(argv[1]));
+  hport = atoi(argv[1]);
+	addr.sin_port = htons(hport);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
@@ -63,44 +65,39 @@ int main(int argc, char **argv) {
 
 int serve(int connfd)
 {
-  int ret_code = 0;
+  struct ServerState state;
+
+  state.command_fd = connfd;
+  state.data_fd = -1;
+  state.listen_fd = -1;
+  state.trans_mode = -1;
+  state.logged = 0;
+  strcpy(state.hip, hip);
+
   int c_code = 0;
   int len = 0;
-  int logged = 0;
   char message[4096];
   char content[4096];
-  int datafd;
-  struct sockaddr_in addr;
 
-  send_msg(connfd, RES_READY);
+  send_msg(state.command_fd, RES_READY);
 
   // loop routine
   while ((len = read_msg(connfd, message))) {
     printf("%s", message);
     c_code = parse_command(message, content);
 
-    if (!logged && c_code != USER_CODE && c_code != PASS_CODE) {
+    if (!state.logged && c_code != USER_CODE && c_code != PASS_CODE) {
       send_msg(connfd, RES_WANTUSER);
       continue;
     }
-    // else if (logged && want_pwd &&
-    //          c_code != PASS_CODE && c_code != XPWD_CODE) {
-    //   send_msg(connfd, RES_WANTPASS);
-    //   continue;
-    // }
 
     switch (c_code) {
       case USER_CODE:
-        command_user(connfd, content);
+        command_user(&state, content);
         break;
 
       case PASS_CODE:
-        if (command_pass(connfd, content)) {
-          send_msg(connfd, RES_ACCEPT_PASS);
-          logged = 1;
-        } else {
-          send_msg(connfd, RES_REJECT_PASS);
-        }
+        command_pass(&state, content);
         break;
 
       case XPWD_CODE:
@@ -108,24 +105,27 @@ int serve(int connfd)
         break;
 
       case QUIT_CODE:
-        command_quit(connfd);
-        return ret_code;
+        command_quit(&state);
+        return 0;
         break;
 
       case PORT_CODE:
-        datafd = command_port(connfd, content, &addr);
+        command_port(&state, content);
         break;
 
       case PASV_CODE:
-        datafd = command_pasv(connfd, hip, &addr);
+        state.listen_fd = command_pasv(&state);
         break;
 
+      case RETR_CODE:
+        command_retr(&state, content);
+
       default:
-        command_unknown(connfd);
+        command_unknown(&state);
         break;
     }
   }
 
   close(connfd);
-  return ret_code;
+  return 0;
 }

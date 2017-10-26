@@ -92,6 +92,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, PASV_COMMAND) == 0) {
     ret = PASV_CODE;
   }
+  else if (strcmp(command, RETR_COMMAND) == 0) {
+    ret = RETR_CODE;
+  }
   else {
     printf("Unknown command: %s\n", command);
   }
@@ -145,9 +148,10 @@ void strip_crlf(char* str)
   }
 }
 
-int command_user(int connfd, char* uname)
+int command_user(struct ServerState* state, char* uname)
 {
   int ret = 0;
+  int connfd = state->command_fd;
   if (strcmp(uname, USER_NAME) == 0) {
     send_msg(connfd, RES_ACCEPT_USER);
     ret = 1;
@@ -158,31 +162,34 @@ int command_user(int connfd, char* uname)
   return ret;
 }
 
-int command_pass(int connfd, char* pwd)
+int command_pass(struct ServerState* state, char* pwd)
 {
-  int ret = 0;
+  int connfd = state->command_fd;
 
   if (strcmp(pwd, PASSWORD) == 0) {
     send_msg(connfd, RES_ACCEPT_PASS);
-    ret = 1;
+    state->logged = 1;
   } else {
     send_msg(connfd, RES_REJECT_PASS);
+    state->logged = 0;
   }
 
-  return ret;
+  return state->logged;
 }
 
-int command_unknown(int connfd)
+int command_unknown(struct ServerState* state)
 {
+  int connfd = state->command_fd;
   send_msg(connfd, RES_UNKNOWN);
   return 0;
 }
 
-int command_port(int connfd, char* content, struct sockaddr_in* addr)
+int command_port(struct ServerState* state, char* content)
 {
-  // create socket
-  int datafd;
-  if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
+  int connfd = state->command_fd;
+  struct sockaddr_in* addr = &(state->target_addr);
+
+  if ((state->data_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
     printf("Error socket(): %s(%d)\n", strerror(errno), errno);
     send_msg(connfd, RES_REJECT_PORT);
     return -1;
@@ -191,7 +198,7 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
   // check
   if (!strlen(content)) {
     send_msg(connfd, RES_ACCEPT_PORT);
-    return datafd;
+    return 1;
   }
 
   char ip[64];
@@ -207,19 +214,18 @@ int command_port(int connfd, char* content, struct sockaddr_in* addr)
     return -1;
   }
 
-  // if (connect(datafd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
-  //   printf("Error connect(): %s(%d)\n", strerror(errno), errno);
-  //   ret = -1;
-  // }
-
   send_msg(connfd, RES_ACCEPT_PORT);
-  return datafd;
+  state->trans_mode = PORT_CODE;
+  return 1;
 }
 
-int command_pasv(int connfd, char* hip, struct sockaddr_in* addr)
+int command_pasv(struct ServerState* state)
 {
-  int datafd;
-  if ((datafd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
+  int connfd = state->command_fd;
+  char* hip = state->hip;
+  struct sockaddr_in* addr = &(state->target_addr);
+
+  if ((state->listen_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
     printf("Error socket(): %s(%d)\n", strerror(errno), errno);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
@@ -233,13 +239,13 @@ int command_pasv(int connfd, char* hip, struct sockaddr_in* addr)
   addr->sin_port = htons(port);
   addr->sin_addr.s_addr = htonl(INADDR_ANY);
 
-  if (bind(datafd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
+  if (bind(state->listen_fd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
     printf("Error bind(): %s(%d)\n", strerror(errno), errno);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
   }
 
-  if (listen(datafd, 10) == -1) {
+  if (listen(state->listen_fd, 10) == -1) {
     printf("Error listen(): %s(%d)\n", strerror(errno), errno);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
@@ -251,15 +257,53 @@ int command_pasv(int connfd, char* hip, struct sockaddr_in* addr)
   char buffer[32] = "";
   sprintf(buffer, RES_ACCEPT_PASV, hip_cp, p1, p2);
   send_msg(connfd, buffer);
+  state->trans_mode = PASV_CODE;
 
-  return datafd;
+  return 1;
 }
 
-int command_quit(int connfd)
+int command_quit(struct ServerState* state)
 {
+  int connfd = state->command_fd;
   send_msg(connfd, RES_CLOSE);
   close(connfd);
   return 0;
+}
+
+int command_retr(struct ServerState* state, char* path)
+{
+  return 0;
+  // int connfd = state->command_fd;
+
+  // if (access(path, R_OK) != 0) {
+  //   send_msg(connfd, RES_TRANS_NOFILE);
+  //   return -1;
+  // }
+
+  // int fd;
+  // if ((fd = open(path, O_RDONLY)) == 0) {
+  //   send_msg(connfd, RES_TRANS_NREAD);
+  //   return -1;
+  // }
+
+  // send_msg(connfd, RES_TRANS_START);
+
+  // if (state.trans_mode == PORT_CODE) {
+  //   if (connect(state.data_fd, (struct sockaddr*)&state.target_addr, sizeof(state.target_addr)) < 0) {
+  //     printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+  //     send_msg(connfd, RES_FAILED_CONN);
+  //     break;
+  //   }
+  // } else if (state.trans_mode == RETR_CODE){
+  //   if ((state.data_fd = accept(state.listen_fd, NULL, NULL)) == -1) {
+  //     printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+  //     send_msg(connfd, RES_FAILED_LSTN);
+  //     break;
+  //   } 
+  // } else {
+  //   send_msg(connfd, RES_WANTCONN);
+  // }
+
 }
 
 int get_local_ip(int sock, char* buf)
