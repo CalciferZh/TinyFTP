@@ -76,6 +76,8 @@ int serve(int connfd)
   state.listen_fd = -1;
   state.trans_mode = -1;
   state.logged = 0;
+  state.hport = hport;
+  state.binary_flag = 1;
   strcpy(state.hip, hip);
 
   int c_code = 0;
@@ -124,8 +126,15 @@ int serve(int connfd)
         command_retr(&state, content);
         break;
 
+      case STOR_CODE:
+        command_stor(&state, content);
+
       case SYST_CODE:
         send_msg(connfd, RES_SYSTEM);
+        break;
+
+      case TYPE_CODE:
+        command_type(&state, content);
         break;
 
       default:

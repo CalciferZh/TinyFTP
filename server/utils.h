@@ -1,7 +1,8 @@
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <net/if.h>
 #include <unistd.h>
 #include <errno.h>
@@ -9,7 +10,6 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
 
@@ -21,6 +21,8 @@
 #define PASV_CODE 5
 #define RETR_CODE 6
 #define SYST_CODE 7
+#define STOR_CODE 8
+#define TYPE_CODE 9
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -30,6 +32,8 @@
 #define PASV_COMMAND "pasv"
 #define RETR_COMMAND "retr"
 #define SYST_COMMAND "syst"
+#define STOR_COMMAND "stor"
+#define TYPE_COMMAND "type"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -42,7 +46,7 @@
 #define RES_ACCEPT_PASS        "220 Password accepted.\r\n"
 #define RES_REJECT_PASS        "503 Wrong password.\r\n"
 
-#define RES_ACCEPT_PORT        "200 PORT command successful.\r\n"
+#define RES_ACCEPT_PORT        "200 PORT command success.\r\n"
 #define RES_REJECT_PORT        "425 PORT command failed.\r\n"
 
 #define RES_ACCEPT_PASV        "227 =%s,%d,%d\r\n"
@@ -57,9 +61,14 @@
 #define RES_TRANS_SUCCESS      "226 Transfer success.\r\n"
 #define RES_TRANS_FAIL         "426 Transfer failed.\r\n"
 
+#define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
+
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
 
 #define RES_SYSTEM             "215 UNIX Type: L8\r\n"
+
+#define RES_ERROR_ARGV         "504 Illegal argument.\r\n"
+#define RES_ACCEPT_TYPE        "200 Type command success.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
 
@@ -78,6 +87,8 @@ struct ServerState
   int listen_fd;
   int trans_mode;
   int logged;
+  int hport;
+  int binary_flag;
   char hip[32];
   struct sockaddr_in target_addr;
 };
@@ -118,6 +129,10 @@ int command_pasv(struct ServerState* state);
 int command_quit(struct ServerState* state);
 
 int command_retr(struct ServerState* state, char* path);
+
+int command_stor(struct ServerState* state, char* path);
+
+int command_type(struct ServerState* state, char* content);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);

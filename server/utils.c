@@ -47,6 +47,26 @@ int send_file(int des_fd, int src_fd)
   return 0;
 }
 
+int recv_file(int des_fd, int src_fd)
+{
+  int len;
+  char buf[DATA_BUF_SIZE];
+
+  while ((len = read(src_fd, buf, DATA_BUF_SIZE)) > 0) {
+    if (write(des_fd, buf, len) == -1) {
+      perror("write in recv_file");
+      return -1;
+    }
+  }
+
+  if (len == 0) {
+    return 1;
+  } else {
+    perror("read in recv_file");
+    return -1;
+  }
+}
+
 int read_msg(int connfd, char* message)
 {
   int n = read(connfd, message, 8191);
@@ -128,6 +148,12 @@ int parse_command(char* message, char* content)
   }
   else if (strcmp(command, SYST_COMMAND) == 0) {
     ret = SYST_CODE;
+  }
+  else if (strcmp(command, STOR_COMMAND) == 0) {
+    ret = STOR_CODE;
+  }
+  else if (strcmp(command, TYPE_COMMAND) == 0) {
+    ret = TYPE_CODE;
   }
   else {
     printf("Unknown command: %s\n", command);
@@ -349,6 +375,62 @@ int command_retr(struct ServerState* state, char* path)
   close(state->data_fd);
   state->data_fd = -1;
   state->trans_mode = -1;
+  return 0;
+}
+
+int command_stor(struct ServerState* state, char* path)
+{
+  int connfd = state->command_fd;
+
+  int des_fd;
+  if ((des_fd = open(path, O_WRONLY | O_CREAT)) == 0) {
+    send_msg(connfd, RES_TRANS_NCREATE);
+    return -1;
+  }
+
+  if (state->trans_mode == PORT_CODE) {
+    if (connect(state->data_fd, (struct sockaddr*)&(state->target_addr), sizeof(state->target_addr)) < 0) {
+      printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+      send_msg(connfd, RES_FAILED_CONN);
+      return -1;
+    }
+  } else if (state->trans_mode == PASV_CODE){
+    if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
+      printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+      send_msg(connfd, RES_FAILED_LSTN);
+      return -1;
+    }
+    close(state->listen_fd);
+  } else {
+    send_msg(connfd, RES_WANTCONN);
+    return -1;
+  }
+
+  send_msg(connfd, RES_TRANS_START);
+  if (recv_file(des_fd, state->data_fd) == 0) {
+    send_msg(connfd, RES_TRANS_SUCCESS);
+  } else {
+    send_msg(connfd, RES_TRANS_FAIL);
+  }
+
+  close(state->data_fd);
+  state->data_fd = -1;
+  state->trans_mode = -1;
+  return 0;
+}
+
+int command_type(struct ServerState* state, char* content)
+{
+  str_lower(content);
+  if (content[0] == 'i' || content[0] == 'l') {
+    state->binary_flag = 1;
+    send_msg(state->command_fd, RES_ACCEPT_TYPE);
+  } else if (content[0] == 'a') {
+    state->binary_flag = 0;
+    send_msg(state->command_fd, RES_ACCEPT_TYPE);
+  } else {
+    send_msg(state->command_fd, RES_ERROR_ARGV);
+  }
   return 0;
 }
 
