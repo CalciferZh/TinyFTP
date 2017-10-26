@@ -36,7 +36,7 @@ int send_file(int des_fd, int src_fd)
       perror("read in send_file");
       return -1;
     }
-    if (send_msg(des_fd, buf) != 0) {
+    if (write(des_fd, buf, fin_read) == -1) {
       perror("send in send_file");
       return -1;
     }
