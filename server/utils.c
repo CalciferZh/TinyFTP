@@ -16,6 +16,35 @@ int send_msg(int connfd, char* message)
   return 0;
 }
 
+int send_file(int des_fd, int src_fd)
+{
+  struct stat stat_buf;
+  fstat(src_fd, &stat_buf);
+
+  int to_read, fin_read;
+  char buf[DATA_BUF_SIZE];
+
+  int remain = stat_buf.st_size;
+  printf("Start file transfer...\n");
+  printf("%d remained...\n", remain);
+
+  while (remain > 0) {
+    to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+    fin_read = read(src_fd, buf, to_read);
+    printf("Read %d bytes...\n", fin_read);
+    if (fin_read <= 0) {
+      perror("read in send_file");
+      return -1;
+    }
+    if (send_msg(des_fd, buf) != 0) {
+      perror("send in send_file");
+      return -1;
+    }
+    printf("%d remained...\n", remain);
+  }
+  return 0;
+}
+
 int read_msg(int connfd, char* message)
 {
   int n = read(connfd, message, 8191);
@@ -152,7 +181,8 @@ int command_user(struct ServerState* state, char* uname)
 {
   int ret = 0;
   int connfd = state->command_fd;
-  if (strcmp(uname, USER_NAME) == 0) {
+  //if (strcmp(uname, USER_NAME) == 0) {
+  if (1) {
     send_msg(connfd, RES_ACCEPT_USER);
     ret = 1;
   } else {
@@ -166,7 +196,8 @@ int command_pass(struct ServerState* state, char* pwd)
 {
   int connfd = state->command_fd;
 
-  if (strcmp(pwd, PASSWORD) == 0) {
+  //if (strcmp(pwd, PASSWORD) == 0) {
+  if (1) {
     send_msg(connfd, RES_ACCEPT_PASS);
     state->logged = 1;
   } else {
@@ -272,38 +303,57 @@ int command_quit(struct ServerState* state)
 
 int command_retr(struct ServerState* state, char* path)
 {
-  return 0;
-  // int connfd = state->command_fd;
+  int connfd = state->command_fd;
 
-  // if (access(path, R_OK) != 0) {
+  // if (access(path, 4) != 0) {
   //   send_msg(connfd, RES_TRANS_NOFILE);
   //   return -1;
   // }
 
-  // int fd;
-  // if ((fd = open(path, O_RDONLY)) == 0) {
-  //   send_msg(connfd, RES_TRANS_NREAD);
-  //   return -1;
-  // }
+  int src_fd;
+  if ((src_fd = open(path, O_RDONLY)) == 0) {
+    send_msg(connfd, RES_TRANS_NREAD);
+    return -1;
+  }
 
-  // send_msg(connfd, RES_TRANS_START);
+  // =======================================================================
+  char buf[1024];
+  if (read(src_fd, buf, 16) <= 0) {
+    perror("read in send_file");
+    send_msg(connfd, RES_TRANS_NREAD);
+    return -1;
+  }
 
-  // if (state.trans_mode == PORT_CODE) {
-  //   if (connect(state.data_fd, (struct sockaddr*)&state.target_addr, sizeof(state.target_addr)) < 0) {
-  //     printf("Error connect(): %s(%d)\n", strerror(errno), errno);
-  //     send_msg(connfd, RES_FAILED_CONN);
-  //     break;
-  //   }
-  // } else if (state.trans_mode == RETR_CODE){
-  //   if ((state.data_fd = accept(state.listen_fd, NULL, NULL)) == -1) {
-  //     printf("Error accept(): %s(%d)\n", strerror(errno), errno);
-  //     send_msg(connfd, RES_FAILED_LSTN);
-  //     break;
-  //   } 
-  // } else {
-  //   send_msg(connfd, RES_WANTCONN);
-  // }
+  if (state->trans_mode == PORT_CODE) {
+    if (connect(state->data_fd, (struct sockaddr*)&(state->target_addr), sizeof(state->target_addr)) < 0) {
+      printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+      send_msg(connfd, RES_FAILED_CONN);
+      return -1;
+    }
+  } else if (state->trans_mode == PASV_CODE){
+    if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
+      printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+      send_msg(connfd, RES_FAILED_LSTN);
+      return -1;
+    }
+    close(state->listen_fd);
+  } else {
+    send_msg(connfd, RES_WANTCONN);
+    return -1;
+  }
 
+  send_msg(connfd, RES_TRANS_START);
+  if (send_file(state->data_fd, src_fd) == 0) {
+    send_msg(connfd, RES_TRANS_SUCCESS);
+  } else {
+    printf("We returned!\n");
+    send_msg(connfd, RES_TRANS_FAIL);
+  }
+
+  close(state->data_fd);
+  state->data_fd = -1;
+  state->trans_mode = -1;
+  return 0;
 }
 
 int get_local_ip(int sock, char* buf)

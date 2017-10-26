@@ -9,6 +9,8 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdlib.h>
 
 #define USER_CODE 0
@@ -48,8 +50,10 @@
 #define RES_FAILED_LSTN        "425 Listen for request failed.\r\n"
 
 #define RES_TRANS_START        "150 Start transfer.\r\n"
-#define RES_TRANS_NOFILE       "550 File does not exist.\r\n"
-#define RES_TRANS_NREAD        "450 Failed to read file.\r\n"
+#define RES_TRANS_NOFILE       "551 File does not exist.\r\n"
+#define RES_TRANS_NREAD        "451 Failed to read file.\r\n"
+#define RES_TRANS_SUCCESS      "226 Transfer success.\r\n"
+#define RES_TRANS_FAIL         "426 Transfer failed.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
 
@@ -60,6 +64,8 @@
 
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"
+
+#define DATA_BUF_SIZE 8192
 
 struct ServerState
 {
@@ -77,6 +83,8 @@ int send_msg(int connfd, char* message);
 
 // a secured method to receive message
 int read_msg(int connfd, char* message);
+
+int send_file(int des_fd, int src_fd);
 
 void str_lower(char* str);
 

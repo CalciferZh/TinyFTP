@@ -114,7 +114,7 @@ int serve(int connfd)
         break;
 
       case PASV_CODE:
-        state.listen_fd = command_pasv(&state);
+        command_pasv(&state);
         break;
 
       case RETR_CODE:

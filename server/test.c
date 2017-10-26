@@ -53,6 +53,14 @@ void parse_addr_test()
   }
 }
 
+void command_retr_test()
+{
+  struct ServerState state;
+  state.command_fd = STDOUT_FILENO;
+  state.trans_modes = PASV_CODE;
+  
+}
+
 int main()
 {
   printf("================================================================\n");
