@@ -53,4 +53,4 @@ dkms.conf
 
 # executable file
 *_app
-sample_another.txt
+sample*
