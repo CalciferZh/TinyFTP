@@ -32,7 +32,7 @@ int send_file(int des_fd, int src_fd)
     to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
     fin_read = read(src_fd, buf, to_read);
     printf("Read %d bytes...\n", fin_read);
-    if (fin_read <= 0) {
+    if (fin_read < 0) {
       perror("read in send_file");
       return -1;
     }
@@ -40,8 +40,10 @@ int send_file(int des_fd, int src_fd)
       perror("send in send_file");
       return -1;
     }
+    remain -= fin_read;
     printf("%d remained...\n", remain);
   }
+  printf("Transfer success!\n");
   return 0;
 }
 
@@ -123,6 +125,9 @@ int parse_command(char* message, char* content)
   }
   else if (strcmp(command, RETR_COMMAND) == 0) {
     ret = RETR_CODE;
+  }
+  else if (strcmp(command, SYST_COMMAND) == 0) {
+    ret = SYST_CODE;
   }
   else {
     printf("Unknown command: %s\n", command);
@@ -305,21 +310,13 @@ int command_retr(struct ServerState* state, char* path)
 {
   int connfd = state->command_fd;
 
-  // if (access(path, 4) != 0) {
-  //   send_msg(connfd, RES_TRANS_NOFILE);
-  //   return -1;
-  // }
-
-  int src_fd;
-  if ((src_fd = open(path, O_RDONLY)) == 0) {
-    send_msg(connfd, RES_TRANS_NREAD);
+  if (access(path, 4) != 0) {
+    send_msg(connfd, RES_TRANS_NOFILE);
     return -1;
   }
 
-  // =======================================================================
-  char buf[1024];
-  if (read(src_fd, buf, 16) <= 0) {
-    perror("read in send_file");
+  int src_fd;
+  if ((src_fd = open(path, O_RDONLY)) == 0) {
     send_msg(connfd, RES_TRANS_NREAD);
     return -1;
   }
@@ -346,7 +343,6 @@ int command_retr(struct ServerState* state, char* path)
   if (send_file(state->data_fd, src_fd) == 0) {
     send_msg(connfd, RES_TRANS_SUCCESS);
   } else {
-    printf("We returned!\n");
     send_msg(connfd, RES_TRANS_FAIL);
   }
 

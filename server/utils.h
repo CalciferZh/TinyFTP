@@ -20,6 +20,7 @@
 #define PORT_CODE 4
 #define PASV_CODE 5
 #define RETR_CODE 6
+#define SYST_CODE 7
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -28,6 +29,7 @@
 #define PORT_COMMAND "port"
 #define PASV_COMMAND "pasv"
 #define RETR_COMMAND "retr"
+#define SYST_COMMAND "syst"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -56,6 +58,8 @@
 #define RES_TRANS_FAIL         "426 Transfer failed.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
+
+#define RES_SYSTEM             "215 UNIX Type: L8\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
 

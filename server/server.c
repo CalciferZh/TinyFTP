@@ -107,7 +107,6 @@ int serve(int connfd)
       case QUIT_CODE:
         command_quit(&state);
         return 0;
-        break;
 
       case PORT_CODE:
         command_port(&state, content);
@@ -119,6 +118,11 @@ int serve(int connfd)
 
       case RETR_CODE:
         command_retr(&state, content);
+        break;
+
+      case SYST_CODE:
+        send_msg(connfd, RES_SYSTEM);
+        break;
 
       default:
         command_unknown(&state);
