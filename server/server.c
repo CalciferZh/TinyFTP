@@ -28,7 +28,11 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-  hport = atoi(argv[1]);
+  if (argc > 1) {
+    hport = atoi(argv[1]);
+  } else {
+    hport = 7788;
+  }
 	addr.sin_port = htons(hport);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
