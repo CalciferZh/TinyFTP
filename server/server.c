@@ -9,6 +9,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "utils.h"
 
@@ -70,6 +71,8 @@ int main(int argc, char **argv) {
 int serve(int connfd)
 {
   struct ServerState state;
+
+  srand(time(NULL));
 
   state.command_fd = connfd;
   state.data_fd = -1;
