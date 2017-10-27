@@ -26,6 +26,7 @@
 #define ABOR_CODE 10
 #define LIST_CODE 11
 #define NLST_CODE 12
+#define MKD_CODE 13
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -40,6 +41,7 @@
 #define ABOR_COMMAND "abor"
 #define LIST_COMMAND "list"
 #define NLST_COMMAND "nlst"
+#define MKD_COMMAND  "mkd"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -67,6 +69,9 @@
 #define RES_TRANS_SUCCESS      "226 Transfer success.\r\n"
 #define RES_TRANS_FAIL         "426 Transfer failed.\r\n"
 
+#define RES_ACCEPT_MKD         "250 Directory created succesfully.\r\n"
+#define RES_REJECT_MKD         "550 Directory created failed.\r\n"
+
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
@@ -74,12 +79,10 @@
 #define RES_SYSTEM             "215 UNIX Type: L8\r\n"
 
 #define RES_ERROR_ARGV         "504 Illegal argument.\r\n"
+
 #define RES_ACCEPT_TYPE        "200 Type set to I.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
-
-#define PORT_MODE 0
-#define PASV_MODE 1
 
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"
@@ -145,6 +148,8 @@ int command_stor(struct ServerState* state, char* path);
 int command_type(struct ServerState* state, char* content);
 
 int command_list(struct ServerState* state, char* path, int is_long);
+
+int command_mkd(struct ServerState* state, char* path);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);

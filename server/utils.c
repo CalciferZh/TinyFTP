@@ -170,6 +170,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, NLST_COMMAND) == 0) {
     ret = NLST_CODE;
   }
+  else if (strcmp(command, MKD_COMMAND) == 0) {
+    ret = MKD_CODE;
+  }
   return ret;
 }
 
@@ -503,6 +506,17 @@ int command_list(struct ServerState* state, char* path, int is_long)
   pclose(fp);
   close_connections(state);
   return 0;
+}
+
+int command_mkd(struct ServerState* state, char* path)
+{
+  int flag = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  if (flag == 0) {
+    send_msg(state->command_fd, RES_ACCEPT_MKD);
+  } else {
+    send_msg(state->command_fd, RES_REJECT_MKD);
+  }
+  return flag;
 }
 
 int get_local_ip(int sock, char* buf)

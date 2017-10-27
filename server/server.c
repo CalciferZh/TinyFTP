@@ -151,6 +151,11 @@ int serve(int connfd)
 
       case NLST_CODE:
         command_list(&state, content, 0);
+        break;
+
+      case MKD_CODE:
+        command_mkd(&state, content);
+        break;
 
       default:
         command_unknown(&state);
