@@ -25,6 +25,7 @@
 #define TYPE_CODE 9
 #define ABOR_CODE 10
 #define LIST_CODE 11
+#define NLST_CODE 12
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -38,6 +39,7 @@
 #define TYPE_COMMAND "type"
 #define ABOR_COMMAND "abor"
 #define LIST_COMMAND "list"
+#define NLST_COMMAND "nlst"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -142,7 +144,7 @@ int command_stor(struct ServerState* state, char* path);
 
 int command_type(struct ServerState* state, char* content);
 
-int command_list(struct ServerState* state, char* path);
+int command_list(struct ServerState* state, char* path, int is_long);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);

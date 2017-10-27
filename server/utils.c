@@ -167,10 +167,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, LIST_COMMAND) == 0) {
     ret = LIST_CODE;
   }
-  else {
-    printf("Unknown command: %s\n", command);
+  else if (strcmp(command, NLST_COMMAND) == 0) {
+    ret = NLST_CODE;
   }
-
   return ret;
 }
 
@@ -456,8 +455,12 @@ int command_type(struct ServerState* state, char* content)
   return 0;
 }
 
-int command_list(struct ServerState* state, char* path)
+int command_list(struct ServerState* state, char* path, int is_long)
 {
+  if (strlen(path) == 0) {
+    path = "./";
+  }
+  
   int connfd = state->command_fd;
 
   if (access(path, 0) != 0) { // 0: existence
@@ -466,7 +469,12 @@ int command_list(struct ServerState* state, char* path)
   }
 
   char cmd[128];
-  sprintf(cmd, "ls -l %s", path);
+  if (is_long) {
+    sprintf(cmd, "ls -l %s", path);
+  } else {
+    sprintf(cmd, "ls %s", path);
+  }
+  
   FILE* fp = popen(cmd, "r");
 
   if (!fp) {
