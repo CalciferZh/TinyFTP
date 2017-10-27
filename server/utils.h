@@ -23,6 +23,7 @@
 #define SYST_CODE 7
 #define STOR_CODE 8
 #define TYPE_CODE 9
+#define ABOR_CODE 10
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -34,6 +35,7 @@
 #define SYST_COMMAND "syst"
 #define STOR_COMMAND "stor"
 #define TYPE_COMMAND "type"
+#define ABOR_COMMAND "abor"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -68,7 +70,7 @@
 #define RES_SYSTEM             "215 UNIX Type: L8\r\n"
 
 #define RES_ERROR_ARGV         "504 Illegal argument.\r\n"
-#define RES_ACCEPT_TYPE        "200 Type command success.\r\n"
+#define RES_ACCEPT_TYPE        "200 Type set to I.\r\n"
 
 #define RES_CLOSE              "421 Bye.\r\n"
 

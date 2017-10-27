@@ -155,6 +155,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, TYPE_COMMAND) == 0) {
     ret = TYPE_CODE;
   }
+  else if (strcmp(command, ABOR_COMMAND) == 0) {
+    ret = ABOR_CODE;
+  }
   else {
     printf("Unknown command: %s\n", command);
   }

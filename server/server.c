@@ -111,6 +111,7 @@ int serve(int connfd)
         break;
 
       case QUIT_CODE:
+      case ABOR_CODE:
         command_quit(&state);
         return 0;
 
