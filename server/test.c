@@ -53,19 +53,23 @@ void parse_addr_test()
   }
 }
 
-void command_retr_test()
+void command_list_test()
 {
-  struct ServerState state;
-  state.command_fd = STDOUT_FILENO;
-  state.trans_modes = PASV_CODE;
-  
+  FILE *fp;
+  fp = popen("ls -l", "r");
+  char buffer[256];
+  while (fgets(buffer, 256, fp)) {
+    printf("%s", buffer);
+  }
+  pclose(fp); 
 }
 
 int main()
 {
   printf("================================================================\n");
-  split_command_test();
-  parse_addr_test();
+  command_list_test();
+  // split_command_test();
+  // parse_addr_test();
   return 0;
 }
 

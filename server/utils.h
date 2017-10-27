@@ -24,6 +24,7 @@
 #define STOR_CODE 8
 #define TYPE_CODE 9
 #define ABOR_CODE 10
+#define LIST_CODE 11
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -36,6 +37,7 @@
 #define STOR_COMMAND "stor"
 #define TYPE_COMMAND "type"
 #define ABOR_COMMAND "abor"
+#define LIST_COMMAND "list"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -113,6 +115,8 @@ void split_command(char* message, char* command, char* content);
 
 // parse the command from client
 int parse_command(char* message, char* content);
+
+int connect_by_mode(struct ServerState* state);
 
 // parse ip address & port
 int parse_addr(char* content, char* ip_buf);

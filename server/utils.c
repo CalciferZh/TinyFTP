@@ -164,11 +164,51 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, ABOR_COMMAND) == 0) {
     ret = ABOR_CODE;
   }
+  else if (strcmp(command, LIST_COMMAND) == 0) {
+    ret = LIST_CODE;
+  }
   else {
     printf("Unknown command: %s\n", command);
   }
 
   return ret;
+}
+
+int connect_by_mode(struct ServerState* state)
+{
+  int connfd = state->command_fd;
+  if (state->trans_mode == PORT_CODE) {
+    if (connect(
+          state->data_fd,
+          (struct sockaddr*)&(state->target_addr),
+          sizeof(state->target_addr)
+        ) < 0) {
+      sprintf(error_buf, ERROR_PATT, "connect", "command_stor");
+      perror(error_buf);
+      send_msg(connfd, RES_FAILED_CONN);
+      return -1;
+    }
+  } else if (state->trans_mode == PASV_CODE){
+    if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
+      sprintf(error_buf, ERROR_PATT, "accept", "command_stor");
+      perror(error_buf);
+      send_msg(connfd, RES_FAILED_LSTN);
+      return -1;
+    }
+    close(state->listen_fd);
+  } else {
+    send_msg(connfd, RES_WANTCONN);
+    return -1;
+  }
+  return 0;
+}
+
+int close_connections(struct ServerState* state)
+{
+  close(state->data_fd);
+  state->data_fd = -1;
+  state->trans_mode = -1;
+  return 0;
 }
 
 int parse_addr(char* content, char* ip)
@@ -361,27 +401,7 @@ int command_retr(struct ServerState* state, char* path)
     return -1;
   }
 
-  if (state->trans_mode == PORT_CODE) {
-    if (connect(
-          state->data_fd,
-          (struct sockaddr*)&(state->target_addr),
-          sizeof(state->target_addr)
-        ) < 0) {
-      sprintf(error_buf, ERROR_PATT, "connect", "command_retr");
-      perror(error_buf);
-      send_msg(connfd, RES_FAILED_CONN);
-      return -1;
-    }
-  } else if (state->trans_mode == PASV_CODE){
-    if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
-      sprintf(error_buf, ERROR_PATT, "accept", "command_retr");
-      perror(error_buf);
-      send_msg(connfd, RES_FAILED_LSTN);
-      return -1;
-    }
-    close(state->listen_fd);
-  } else {
-    send_msg(connfd, RES_WANTCONN);
+  if (connect_by_mode(state) != 0) {
     return -1;
   }
 
@@ -392,9 +412,7 @@ int command_retr(struct ServerState* state, char* path)
     send_msg(connfd, RES_TRANS_FAIL);
   }
 
-  close(state->data_fd);
-  state->data_fd = -1;
-  state->trans_mode = -1;
+  close_connections(state);
   return 0;
 }
 
@@ -408,27 +426,7 @@ int command_stor(struct ServerState* state, char* path)
     return -1;
   }
 
-  if (state->trans_mode == PORT_CODE) {
-    if (connect(
-          state->data_fd,
-          (struct sockaddr*)&(state->target_addr),
-          sizeof(state->target_addr)
-        ) < 0) {
-      sprintf(error_buf, ERROR_PATT, "connect", "command_stor");
-      perror(error_buf);
-      send_msg(connfd, RES_FAILED_CONN);
-      return -1;
-    }
-  } else if (state->trans_mode == PASV_CODE){
-    if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
-      sprintf(error_buf, ERROR_PATT, "accept", "command_stor");
-      perror(error_buf);
-      send_msg(connfd, RES_FAILED_LSTN);
-      return -1;
-    }
-    close(state->listen_fd);
-  } else {
-    send_msg(connfd, RES_WANTCONN);
+  if (connect_by_mode(state) != 0) {
     return -1;
   }
 
@@ -439,9 +437,7 @@ int command_stor(struct ServerState* state, char* path)
     send_msg(connfd, RES_TRANS_FAIL);
   }
 
-  close(state->data_fd);
-  state->data_fd = -1;
-  state->trans_mode = -1;
+  close_connections(state);
   return 0;
 }
 
@@ -457,6 +453,11 @@ int command_type(struct ServerState* state, char* content)
   } else {
     send_msg(state->command_fd, RES_ERROR_ARGV);
   }
+  return 0;
+}
+
+int command_list(struct ServerState* state, char* content)
+{
   return 0;
 }
 
