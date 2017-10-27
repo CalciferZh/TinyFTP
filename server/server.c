@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
 	struct sockaddr_in addr;
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "socket", "main");
+    perror(error_buf);
 		return 1;
 	}
 
@@ -38,12 +39,14 @@ int main(int argc, char **argv) {
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		printf("Error bind(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "bind", "main");
+    perror(error_buf);
 		return 1;
 	}
 
 	if (listen(listenfd, 10) == -1) {
-		printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "listen", "main");
+    perror(error_buf);
 		return 1;
 	}
 
@@ -52,7 +55,8 @@ int main(int argc, char **argv) {
 
 	while (1) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
-			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+      sprintf(error_buf, ERROR_PATT, "accept", "main");
+      perror(error_buf);
 			continue;
 		} else {
 			if (fork() == 0) {

@@ -80,6 +80,8 @@
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"
 
+#define ERROR_PATT             "Error %s() in %s()"
+
 #define DATA_BUF_SIZE 8192
 
 struct ServerState
@@ -141,5 +143,5 @@ int get_local_ip(int sock, char* buf);
 
 int get_random_port(int* p1, int* p2);
 
-
+char error_buf[128];
 

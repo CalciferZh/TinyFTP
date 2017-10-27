@@ -7,7 +7,8 @@ int send_msg(int connfd, char* message)
   while (p < len) {
     int n = write(connfd, message + p, len - p);
     if (n < 0) {
-      printf("Error write(): %s(%d)\n", strerror(errno), errno);
+      sprintf(error_buf, ERROR_PATT, "write", "send_msg");
+      perror(error_buf);
       return -1;
     } else {
       p += n;
@@ -33,11 +34,13 @@ int send_file(int des_fd, int src_fd)
     fin_read = read(src_fd, buf, to_read);
     printf("Read %d bytes...\n", fin_read);
     if (fin_read < 0) {
-      perror("read in send_file");
+      sprintf(error_buf, ERROR_PATT, "read", "send_file");
+      perror(error_buf);
       return -1;
     }
     if (write(des_fd, buf, fin_read) == -1) {
-      perror("send in send_file");
+      sprintf(error_buf, ERROR_PATT, "write", "send_file");
+      perror(error_buf);
       return -1;
     }
     remain -= fin_read;
@@ -54,7 +57,8 @@ int recv_file(int des_fd, int src_fd)
 
   while ((len = read(src_fd, buf, DATA_BUF_SIZE)) > 0) {
     if (write(des_fd, buf, len) == -1) {
-      perror("write in recv_file");
+      sprintf(error_buf, ERROR_PATT, "write", "recv_file");
+      perror(error_buf);
       return -1;
     }
   }
@@ -62,7 +66,8 @@ int recv_file(int des_fd, int src_fd)
   if (len == 0) {
     return 1;
   } else {
-    perror("read in recv_file");
+    sprintf(error_buf, ERROR_PATT, "read", "recv_file");
+      perror(error_buf);
     return -1;
   }
 }
@@ -71,7 +76,8 @@ int read_msg(int connfd, char* message)
 {
   int n = read(connfd, message, 8191);
   if (n < 0) {
-    printf("Error read(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "read", "read_msg");
+      perror(error_buf);
     close(connfd);
     return -1;
   }
@@ -255,7 +261,8 @@ int command_port(struct ServerState* state, char* content)
   struct sockaddr_in* addr = &(state->target_addr);
 
   if ((state->data_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
-    printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "scoket", "aommand_port");
+    perror(error_buf);
     send_msg(connfd, RES_REJECT_PORT);
     return -1;
   }
@@ -274,7 +281,8 @@ int command_port(struct ServerState* state, char* content)
 
   // translate the decimal IP address to binary
   if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
-    printf("Error inet_pton(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "inet_pton", "command_port");
+    perror(error_buf);
     send_msg(connfd, RES_REJECT_PORT);
     return -1;
   }
@@ -291,7 +299,8 @@ int command_pasv(struct ServerState* state)
   struct sockaddr_in* addr = &(state->target_addr);
 
   if ((state->listen_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
-    printf("Error socket(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "scoket", "command_pasv");
+    perror(error_buf);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
   }
@@ -305,13 +314,15 @@ int command_pasv(struct ServerState* state)
   addr->sin_addr.s_addr = htonl(INADDR_ANY);
 
   if (bind(state->listen_fd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
-    printf("Error bind(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "bind", "command_pasv");
+    perror(error_buf);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
   }
 
   if (listen(state->listen_fd, 10) == -1) {
-    printf("Error listen(): %s(%d)\n", strerror(errno), errno);
+    sprintf(error_buf, ERROR_PATT, "listen", "command_pasv");
+   perror(error_buf);
     send_msg(connfd, RES_REJECT_PASV);
     return -1;
   }
@@ -351,14 +362,20 @@ int command_retr(struct ServerState* state, char* path)
   }
 
   if (state->trans_mode == PORT_CODE) {
-    if (connect(state->data_fd, (struct sockaddr*)&(state->target_addr), sizeof(state->target_addr)) < 0) {
-      printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+    if (connect(
+          state->data_fd,
+          (struct sockaddr*)&(state->target_addr),
+          sizeof(state->target_addr)
+        ) < 0) {
+      sprintf(error_buf, ERROR_PATT, "connect", "command_retr");
+      perror(error_buf);
       send_msg(connfd, RES_FAILED_CONN);
       return -1;
     }
   } else if (state->trans_mode == PASV_CODE){
     if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
-      printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+      sprintf(error_buf, ERROR_PATT, "accept", "command_retr");
+      perror(error_buf);
       send_msg(connfd, RES_FAILED_LSTN);
       return -1;
     }
@@ -392,14 +409,20 @@ int command_stor(struct ServerState* state, char* path)
   }
 
   if (state->trans_mode == PORT_CODE) {
-    if (connect(state->data_fd, (struct sockaddr*)&(state->target_addr), sizeof(state->target_addr)) < 0) {
-      printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+    if (connect(
+          state->data_fd,
+          (struct sockaddr*)&(state->target_addr),
+          sizeof(state->target_addr)
+        ) < 0) {
+      sprintf(error_buf, ERROR_PATT, "connect", "command_stor");
+      perror(error_buf);
       send_msg(connfd, RES_FAILED_CONN);
       return -1;
     }
   } else if (state->trans_mode == PASV_CODE){
     if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
-      printf("Error accept(): %s(%d)\n", strerror(errno), errno);
+      sprintf(error_buf, ERROR_PATT, "accept", "command_stor");
+      perror(error_buf);
       send_msg(connfd, RES_FAILED_LSTN);
       return -1;
     }
