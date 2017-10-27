@@ -77,7 +77,7 @@ int read_msg(int connfd, char* message)
   int n = read(connfd, message, 8191);
   if (n < 0) {
     sprintf(error_buf, ERROR_PATT, "read", "read_msg");
-      perror(error_buf);
+    perror(error_buf);
     close(connfd);
     return -1;
   }
@@ -243,16 +243,16 @@ int parse_addr(char* content, char* ip)
 void strip_crlf(char* str)
 {
   int len = strlen(str);
-  if (len < 2) {
+  if (len < 1) {
     return;
   }
-  if (str[len - 2] == '\n' || str[len - 2] == '\r') {
-    str[len - 2] = '\0';
-    if (len < 3) {
+  if (str[len - 1] == '\n' || str[len - 1] == '\r') {
+    str[len - 1] = '\0';
+    if (len < 2) {
       return;
     }
-    if (str[len - 3] == '\n' || str[len - 3] == '\r') {
-      str[len - 3] = '\0';
+    if (str[len - 2] == '\n' || str[len - 2] == '\r') {
+      str[len - 2] = '\0';
     }
   }
 }
@@ -390,7 +390,7 @@ int command_retr(struct ServerState* state, char* path)
 {
   int connfd = state->command_fd;
 
-  if (access(path, 4) != 0) {
+  if (access(path, 4) != 0) { // 4: readable
     send_msg(connfd, RES_TRANS_NOFILE);
     return -1;
   }
@@ -456,8 +456,44 @@ int command_type(struct ServerState* state, char* content)
   return 0;
 }
 
-int command_list(struct ServerState* state, char* content)
+int command_list(struct ServerState* state, char* path)
 {
+  int connfd = state->command_fd;
+
+  if (access(path, 0) != 0) { // 0: existence
+    send_msg(connfd, RES_TRANS_NOFILE);
+    return -1;
+  }
+
+  char cmd[128];
+  sprintf(cmd, "ls -l %s", path);
+  FILE* fp = popen(cmd, "r");
+
+  if (!fp) {
+    sprintf(error_buf, ERROR_PATT, "popen", "command_list");
+    perror(error_buf);
+    send_msg(connfd, RES_TRANS_NREAD);
+  }
+
+  if (connect_by_mode(state) != 0) {
+    return -1;
+  }
+
+  send_msg(connfd, RES_TRANS_START);
+
+  char buf[128];
+  fgets(buf, sizeof(buf), fp); // remove the first line
+  while (fgets(buf, sizeof(buf), fp)) {
+    strip_crlf(buf);
+    strcat(buf, "\r\n");
+    printf("%s", buf);
+    send_msg(state->data_fd, buf);
+  }
+
+  printf("Command list finish transfer.\n");
+  send_msg(connfd, RES_TRANS_SUCCESS);
+  pclose(fp);
+  close_connections(state);
   return 0;
 }
 

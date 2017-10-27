@@ -61,7 +61,7 @@
 
 #define RES_TRANS_START        "150 Start transfer.\r\n"
 #define RES_TRANS_NOFILE       "551 File does not exist.\r\n"
-#define RES_TRANS_NREAD        "451 Failed to read file.\r\n"
+#define RES_TRANS_NREAD        "451 Failed to read.\r\n"
 #define RES_TRANS_SUCCESS      "226 Transfer success.\r\n"
 #define RES_TRANS_FAIL         "426 Transfer failed.\r\n"
 
@@ -141,6 +141,8 @@ int command_retr(struct ServerState* state, char* path);
 int command_stor(struct ServerState* state, char* path);
 
 int command_type(struct ServerState* state, char* content);
+
+int command_list(struct ServerState* state, char* path);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);
