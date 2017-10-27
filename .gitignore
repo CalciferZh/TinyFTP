@@ -54,3 +54,4 @@ dkms.conf
 # executable file
 *_app
 sample*
+*.pdf
