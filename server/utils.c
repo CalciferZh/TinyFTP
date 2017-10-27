@@ -280,7 +280,7 @@ int command_port(struct ServerState* state, char* content)
   addr->sin_port = htons(port);
 
   // translate the decimal IP address to binary
-  if (inet_pton(AF_INET, ip, &(addr->sin_addr)) != 0) {
+  if (inet_pton(AF_INET, ip, &(addr->sin_addr)) <= 0) {
     sprintf(error_buf, ERROR_PATT, "inet_pton", "command_port");
     perror(error_buf);
     send_msg(connfd, RES_REJECT_PORT);
