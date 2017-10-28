@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
@@ -135,6 +136,8 @@ int connect_by_mode(struct ServerState* state);
 
 // parse ip address & port
 int parse_addr(char* content, char* ip_buf);
+
+int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
 
 void strip_crlf(char* uname);
 

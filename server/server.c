@@ -15,44 +15,26 @@
 #include "utils.h"
 
 char hip[32] = "";
-char hport_str[8] = "";
 int hport;
 
 int serve(int connfd);
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
 
-  int ch;
-
-  while ((ch = getopt(argc, argv, "a:p:")) != -1)
-  {
-    switch (ch) 
-    {
-      case 'a':
-        strcpy(hip, optarg);
-        printf("ip address: %s\n", hip);
-        break;
-
-      case 'p':
-        strcpy(hport_str, optarg);
-        hport = atoi(hport_str);
-        printf("port: %d\n", hport);
-        break;
-
-      case '?':
-       printf("Unknown option: %c\n",(char)optopt);
-       break;
-
-      default:
-        sprintf(error_buf, ERROR_PATT, "getopt", "main");
-        perror(error_buf);
-        break;
-    }
+  // parse arguments
+  char hport_str[16];
+  char root_dir[64];
+  parse_argv(argc, argv, hip, hport_str, root_dir);
+  hport = atoi(hport_str);
+  if (chdir(root_dir) == -1) {
+    sprintf(error_buf, ERROR_PATT, "chdir", "main");
+    perror(error_buf);
+    exit(1);
   }
 
-
+  // connect
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
     sprintf(error_buf, ERROR_PATT, "socket", "main");
     perror(error_buf);
@@ -76,6 +58,13 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+  printf("FTP server start running\n");
+  printf("IP address %s\n", hip);
+  printf("port number %d\n", hport);
+  getcwd(root_dir, sizeof(root_dir));
+  printf("working directory %s\n", root_dir);
+
+  // loop
 	while (1) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
       sprintf(error_buf, ERROR_PATT, "accept", "main");

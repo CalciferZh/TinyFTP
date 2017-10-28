@@ -248,6 +248,53 @@ int parse_addr(char* content, char* ip)
   // return 0;
 }
 
+int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
+{
+  hip[0] = '\0';
+  hport[0] = '\0';
+  root[0] = '\0';
+  struct option opts[] = {
+    {"ip-address", required_argument, NULL, 'a'},
+    {"port",       optional_argument, NULL, 'p'},
+    {"root",       optional_argument, NULL, 'r'}
+  };
+  int opt;
+  while ((opt = getopt_long(argc, argv, "a:p:r:", opts, NULL)) != -1) {
+    switch (opt) {
+      case 'a':
+        strcpy(hip, optarg);
+        break;
+
+      case 'p':
+        strcpy(hport, optarg);
+        break;
+
+      case 'r':
+        strcpy(root, optarg);
+        break;
+
+      case '?':
+       printf("Unknown option: %c\n", (char)optopt);
+       break;
+
+      default:
+        sprintf(error_buf, ERROR_PATT, "getopt_long", "parse_argv");
+        perror(error_buf);
+        break;
+    }
+  }
+
+  if (strlen(hport) == 0) {
+    strcpy(hport, "21");
+  }
+
+  if (strlen(root) == 0) {
+    strcpy(root, "/tmp");
+  }
+
+  return 0;
+}
+
 void strip_crlf(char* str)
 {
   int len = strlen(str);
