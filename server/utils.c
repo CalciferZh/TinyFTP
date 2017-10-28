@@ -549,29 +549,6 @@ int command_rmd(struct ServerState* state, char* path)
   return 0;
 }
 
-int get_local_ip(int sock, char* buf)
-{
-  // char *temp = NULL;
-  // struct ifreq ifr;
-  // char ifname[] = "eth0";
-
-  // memset(ifr.ifr_name, 0, sizeof(ifr.ifr_name));
-  // memcpy(ifr.ifr_name, ifname, strlen(ifname));
-
-  // if((0 != ioctl(sock, SIOCGIFADDR, &ifr)))
-  // {   
-  //   perror("ioctl error");
-  //   return -1;
-  // }
-
-  // temp = inet_ntoa(((struct sockaddr_in*)&(ifr.ifr_addr))->sin_addr);     
-  // memcpy(buf, temp, strlen(temp));
-
-  memcpy(buf, "123.206.56.140", strlen("123.206.56.140"));
-
-  return 0;
-}
-
 int get_random_port(int* p1, int* p2)
 {
   int port = rand() % (65535 - 20000) + 20000;

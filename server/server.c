@@ -10,10 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "utils.h"
 
 char hip[32] = "";
+char hport_str[8] = "";
 int hport;
 
 int serve(int connfd);
@@ -21,6 +23,35 @@ int serve(int connfd);
 int main(int argc, char **argv) {
 	int listenfd, connfd;
 	struct sockaddr_in addr;
+
+  int ch;
+
+  while ((ch = getopt(argc, argv, "a:p:")) != -1)
+  {
+    switch (ch) 
+    {
+      case 'a':
+        strcpy(hip, optarg);
+        printf("ip address: %s\n", hip);
+        break;
+
+      case 'p':
+        strcpy(hport_str, optarg);
+        hport = atoi(hport_str);
+        printf("port: %d\n", hport);
+        break;
+
+      case '?':
+       printf("Unknown option: %c\n",(char)optopt);
+       break;
+
+      default:
+        sprintf(error_buf, ERROR_PATT, "getopt", "main");
+        perror(error_buf);
+        break;
+    }
+  }
+
 
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
     sprintf(error_buf, ERROR_PATT, "socket", "main");
@@ -30,11 +61,6 @@ int main(int argc, char **argv) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-  if (argc > 1) {
-    hport = atoi(argv[1]);
-  } else {
-    hport = 7788;
-  }
 	addr.sin_port = htons(hport);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -49,9 +75,6 @@ int main(int argc, char **argv) {
     perror(error_buf);
 		return 1;
 	}
-
-	get_local_ip(listenfd, hip);
-	printf("host ip address(eth0): %s\n", hip);
 
 	while (1) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {

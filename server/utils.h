@@ -165,9 +165,6 @@ int command_cwd(struct ServerState* state, char* path);
 
 int command_rmd(struct ServerState* state, char* path);
 
-// reference: http://blog.csdn.net/Timsley/article/details/51062342
-int get_local_ip(int sock, char* buf);
-
 int get_random_port(int* p1, int* p2);
 
 char error_buf[128];
