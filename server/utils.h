@@ -26,7 +26,8 @@
 #define ABOR_CODE 10
 #define LIST_CODE 11
 #define NLST_CODE 12
-#define MKD_CODE 13
+#define MKD_CODE  13
+#define CWD_CODE  14
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -42,6 +43,7 @@
 #define LIST_COMMAND "list"
 #define NLST_COMMAND "nlst"
 #define MKD_COMMAND  "mkd"
+#define CWD_COMMAND  "cwd"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -71,6 +73,9 @@
 
 #define RES_ACCEPT_MKD         "250 Directory created succesfully.\r\n"
 #define RES_REJECT_MKD         "550 Directory created failed.\r\n"
+
+#define RES_ACCEPT_CWD         "250 Command CWD accepted.\r\n"
+#define RES_REJECT_CWD         "550 Directory unaccessible.\r\n"
 
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
@@ -150,6 +155,8 @@ int command_type(struct ServerState* state, char* content);
 int command_list(struct ServerState* state, char* path, int is_long);
 
 int command_mkd(struct ServerState* state, char* path);
+
+int command_cwd(struct ServerState* state, char* path);
 
 // reference: http://blog.csdn.net/Timsley/article/details/51062342
 int get_local_ip(int sock, char* buf);

@@ -157,6 +157,10 @@ int serve(int connfd)
         command_mkd(&state, content);
         break;
 
+      case CWD_CODE:
+        command_cwd(&state, content);
+        break;
+
       default:
         command_unknown(&state);
         break;
