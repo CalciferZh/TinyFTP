@@ -1,7 +1,10 @@
 CC = gcc
 CFLAGS = -Wall
 
-all: server_app
+all: server server_app
+
+server:
+	copy ./server ../server_app
 
 server_app: server.o utils.o
 	$(CC) $(CFLAGS) server.o utils.o -o ../server_app
