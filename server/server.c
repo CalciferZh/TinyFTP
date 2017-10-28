@@ -161,6 +161,10 @@ int serve(int connfd)
         command_cwd(&state, content);
         break;
 
+      case RMD_CODE:
+        command_rmd(&state, content);
+        break;
+
       default:
         command_unknown(&state);
         break;

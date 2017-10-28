@@ -176,6 +176,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, CWD_COMMAND) == 0) {
     ret = CWD_CODE;
   }
+  else if (strcmp(command, RMD_COMMAND) == 0) {
+    ret = RMD_CODE;
+  }
   return ret;
 }
 
@@ -529,6 +532,19 @@ int command_cwd(struct ServerState* state, char* path)
     send_msg(connfd, RES_REJECT_CWD); 
   } else {
     send_msg(connfd, RES_ACCEPT_CWD);
+  }
+  return 0;
+}
+
+int command_rmd(struct ServerState* state, char* path)
+{
+  int connfd = state->command_fd;
+  char cmd[32] = "rm -rf ";
+  strcat(cmd, path);
+  if (system(cmd) == 0) {
+    send_msg(connfd, RES_ACCEPT_RMD);
+  } else {
+    send_msg(connfd, RES_REJECT_RMD);
   }
   return 0;
 }
