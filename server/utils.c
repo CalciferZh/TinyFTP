@@ -546,7 +546,9 @@ int command_list(struct ServerState* state, char* path, int is_long)
   send_msg(connfd, RES_TRANS_START);
 
   char buf[128];
-  fgets(buf, sizeof(buf), fp); // remove the first line
+  // if (is_long) {
+  //   fgets(buf, sizeof(buf), fp); // remove the first line
+  // }
   while (fgets(buf, sizeof(buf), fp)) {
     strip_crlf(buf);
     strcat(buf, "\r\n");
