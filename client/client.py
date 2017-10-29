@@ -69,6 +69,31 @@ class Client(object):
 
     return ip, port
 
+  def data_connect(self, msg):
+    ip = None
+    port = None
+    if self.mode == 'pasv':
+      ip, port = self.pasv()
+    elif self.mode == 'port':
+      pass
+    else:
+      print('Error in Client.data_connect: illegal mode')
+
+    # code, res = self.xchg(msg)
+    code = 150
+    data_sock = None
+    if code == 150:
+      if ip and port:
+        data_sock = socket.socket()
+        data_sock.connect((ip, port))
+      else:
+        print('Error in Client.data_connect: no ip or port')
+    else:
+      print(res)
+      print('Error in Client.data_connect: server rejected request')
+    
+    return data_sock
+
   def command_open(self, arg):
     self.hip = arg[0]
     self.hport = 21
@@ -105,17 +130,8 @@ class Client(object):
       print('connection fail due to server')
 
   def command_recv(self, arg):
-    if self.mode == 'pasv':
-      ip, port = self.pasv()
-    elif self.mode == 'port':
-      pass
-    else:
-      print('Error in Client.command_recv: illegal mode')
-      return
-
-    if ip and port:
-      data_sock = socket.socket()
-      data_sock.connect((ip, port))
+    data_sock = self.data_connect('RETR ' + arg)
+    if data_sock:
       with open(arg, 'wb') as f:
         data = data_sock.recv(self.buf_size)
         while data:
@@ -123,7 +139,27 @@ class Client(object):
           data = data_sock.recv(self.buf_size)
       code, res = self.recv()
       print(res)
+      data_sock.close()
+    else:
+      print('Error in Client.command_recv: no data_sock')
 
+  def command_ls(self, arg):
+    if len(arg) == 0:
+      arg = './'
+    else:
+      arg = arg[0]
+    data_sock = self.data_connect('LIST ' + arg)
+    if data_sock:
+      data = ""
+      packet = data_sock.recv(self.buf_size)
+      while packet:
+        data += packet.decode('ascii').strip()
+      print(data)
+      code, res = self.recv()
+      print(res)
+      data_sock.close()
+    else:
+      print('Error in Client.command_ls: no data_sock')
 
   def command_help(self, arg):
     print('Supported commands:')
