@@ -192,13 +192,18 @@ class Client(object):
     print(res)
     self.logged= False
 
+  def command_bye(self, arg):
+    print('bye')
+    return True
+
   def run(self):
-    while True:
+    flag = None
+    while not flag:
       cmd = input('ftp > ').split()
       arg = cmd[1:]
       cmd = cmd[0]
       try:
-        getattr(self, "command_%s" % cmd)(arg)
+        flag = getattr(self, "command_%s" % cmd)(arg)
       except:
         print('invalid command')
 
