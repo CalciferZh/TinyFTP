@@ -3,8 +3,8 @@ CFLAGS = -Wall
 
 all: server server_app
 
-server:
-	cp ./server ../server_app
+server: server_app
+	cp ../server_app ./server
 
 server_app: server.o utils.o
 	$(CC) $(CFLAGS) server.o utils.o -o ../server_app
