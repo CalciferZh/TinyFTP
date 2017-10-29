@@ -30,6 +30,7 @@
 #define MKD_CODE  13
 #define CWD_CODE  14
 #define RMD_CODE  15
+#define REST_CODE 16
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -47,6 +48,8 @@
 #define MKD_COMMAND  "mkd"
 #define CWD_COMMAND  "cwd"
 #define RMD_COMMAND  "rmd"
+#define REST_COMMAND "rest"
+
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -83,6 +86,9 @@
 #define RES_ACCEPT_RMD         "250 Command RMD accepted.\r\n"
 #define RES_REJECT_RMD         "550 Command RMD rejected.\r\n"
 
+#define RES_ACCEPT_REST        "200 Command REST accepted.\r\n"
+#define RES_REJECT_REST        "500 Command REST rejected.\r\n"
+
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
@@ -111,6 +117,7 @@ struct ServerState
   int logged;
   int hport;
   int binary_flag;
+  int offset;
   char hip[32];
   struct sockaddr_in target_addr;
 };
@@ -167,6 +174,8 @@ int command_mkd(struct ServerState* state, char* path);
 int command_cwd(struct ServerState* state, char* path);
 
 int command_rmd(struct ServerState* state, char* path);
+
+int command_rest(struct ServerState* state, char* content);
 
 int get_random_port(int* p1, int* p2);
 

@@ -97,6 +97,7 @@ int serve(int connfd)
   state.logged = 0;
   state.hport = hport;
   state.binary_flag = 1;
+  state.offset = 0;
   strcpy(state.hip, hip);
 
   int c_code = 0;
@@ -175,6 +176,10 @@ int serve(int connfd)
 
       case RMD_CODE:
         command_rmd(&state, content);
+        break;
+
+      case REST_CODE:
+        command_rest(&state, content);
         break;
 
       default:

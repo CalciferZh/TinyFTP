@@ -179,6 +179,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, RMD_COMMAND) == 0) {
     ret = RMD_CODE;
   }
+  else if (strcmp(command, REST_COMMAND) == 0) {
+    ret = REST_CODE;
+  }
   return ret;
 }
 
@@ -455,6 +458,7 @@ int command_retr(struct ServerState* state, char* path)
     send_msg(connfd, RES_TRANS_NREAD);
     return -1;
   }
+  lseek(src_fd, state->offset, SEEK_SET);
 
   if (connect_by_mode(state) != 0) {
     return -1;
@@ -468,6 +472,7 @@ int command_retr(struct ServerState* state, char* path)
   }
 
   close_connections(state);
+  state->offset = 0;
   return 0;
 }
 
@@ -596,6 +601,16 @@ int command_rmd(struct ServerState* state, char* path)
     send_msg(connfd, RES_REJECT_RMD);
   }
   return 0;
+}
+
+int command_rest(struct ServerState* state, char* content)
+{
+  state->offset = atoi(content);
+  if (state->offset > 0) {
+    send_msg(RES_ACCEPT_REST);
+  } else {
+    send_msg(RES_REJECT_REST);
+  }
 }
 
 int get_random_port(int* p1, int* p2)
