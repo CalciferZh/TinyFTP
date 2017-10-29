@@ -129,6 +129,7 @@ class Client(object):
       print('connection fail due to server')
 
   def command_recv(self, arg):
+    arg = ''.join(arg)
     data_sock = self.data_connect('RETR ' + arg)
     if data_sock:
       with open(arg, 'wb') as f:
@@ -143,6 +144,7 @@ class Client(object):
       print('Error in Client.command_recv: no data_sock')
 
   def command_ls(self, arg):
+    arg = ''.join(arg)
     if len(arg) == 0:
       arg = './'
     else:
