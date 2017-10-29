@@ -11,9 +11,6 @@ class Client(object):
     self.buf_size = 8192
     self.logged = False
     self.mode = 'pasv'
-    self.commands = [
-      'open'
-    ]
 
   def extract_addr(self, string):
     ip = None
@@ -143,6 +140,9 @@ class Client(object):
     else:
       print('Error in Client.command_recv: no data_sock')
 
+  def command_send(self, arg):
+    pass
+
   def command_ls(self, arg):
     arg = ''.join(arg)
     if len(arg) == 0:
@@ -164,9 +164,10 @@ class Client(object):
       print('Error in Client.command_ls: no data_sock')
 
   def command_help(self, arg):
-    print('Supported commands:')
-    for cmd in self.commands:
-      print(cmd)
+    print('supported commands:')
+    for attr in dir(self):
+      if 'command_' in attr:
+        print(attr[len('command_'): ])
 
   def run(self):
     while True:
