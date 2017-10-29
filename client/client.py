@@ -220,6 +220,21 @@ class Client(object):
     else:
       print('Error in Client.command_ls: no data_sock')
 
+  def command_mkdir(self, arg):
+    arg = ''.join(arg)
+    code, res = self.xchg('MKD ' + arg)
+    print(res)
+
+  def command_rm(self, arg):
+    arg = ''.join(arg)
+    code, res = self.xchg('RMD ' + arg)
+    print(res)
+
+  def command_cd(self, arg):
+    arg = ''.join(arg)
+    code, res = self.xchg('CWD ' + arg)
+    print(res)
+
   def run(self):
     flag = None
     while not flag:
