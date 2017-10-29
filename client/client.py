@@ -38,9 +38,8 @@ class Client(object):
 
     return ip, port
 
-  def send(self, data):
-    # self.sock.sendall(bytes(data, encoding='ascii'))
-    self.sock.sendall(bytes(data + '\r\n', encoding='ascii'))
+  def send(self, msg):
+    self.sock.sendall(bytes(msg + '\r\n', encoding='ascii'))
 
   def recv(self):
     res = self.sock.recv(self.buf_size).decode('ascii').strip()
@@ -188,6 +187,11 @@ class Client(object):
       if 'command_' in attr:
         print(attr[len('command_'): ])
 
+  def command_close(self, arg):
+    code, res = self.xchg('QUIT')
+    print(res)
+    self.logged= False
+
   def run(self):
     while True:
       cmd = input('ftp > ').split()
@@ -195,8 +199,8 @@ class Client(object):
       cmd = cmd[0]
       try:
         getattr(self, "command_%s" % cmd)(arg)
-      except Exception as e:
-        print(str(e))
+      except:
+        print('invalid command')
 
 
     
