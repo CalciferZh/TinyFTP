@@ -66,7 +66,8 @@ class Client(object):
     else:
       print('connect fail due to server')
 
-  def command_help(self):
+  def command_help(self, arg):
+    print('Supported commands:')
     for cmd in self.commands:
       print(cmd)
 
