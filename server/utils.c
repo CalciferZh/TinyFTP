@@ -607,10 +607,12 @@ int command_rest(struct ServerState* state, char* content)
 {
   state->offset = atoi(content);
   if (state->offset > 0) {
-    send_msg(RES_ACCEPT_REST);
+    send_msg(state->command_fd, RES_ACCEPT_REST);
   } else {
-    send_msg(RES_REJECT_REST);
+    state->offset = 0;
+    send_msg(state->command_fd, RES_REJECT_REST);
   }
+  return 0;
 }
 
 int get_random_port(int* p1, int* p2)
