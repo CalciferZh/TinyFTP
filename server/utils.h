@@ -128,7 +128,7 @@ int send_msg(int connfd, char* message);
 // a secured method to receive message
 int read_msg(int connfd, char* message);
 
-int send_file(int des_fd, int src_fd);
+int send_file(int des_fd, int src_fd, int offset);
 
 void str_lower(char* str);
 
