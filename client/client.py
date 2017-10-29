@@ -47,16 +47,16 @@ class Client(object):
 
   def recv(self):
     res = self.sock.recv(self.buf_size).decode('ascii').strip()
-    return res
+    code = int(res.split()[0])
+    return code, res
 
   def xchg(self, msg):
     """exchange message: send server the msg and return response"""
     # try:
     self.send(msg)
-    res = self.recv()
+    code, res = self.recv()
     # except Exception as e:
     #   print('Error in Client.xchg' + str(e))
-    code = int(res.split()[0])
     return code, res
 
   def pasv(self):
@@ -68,21 +68,20 @@ class Client(object):
       ip, port = self.extract_addr(res)
 
     return ip, port
-    
+
   def command_open(self, arg):
     self.hip = arg[0]
     self.hport = 21
     if len(arg) > 1:
       self.hport = int(arg[1])
     self.sock.connect((self.hip, self.hport))
-    res = self.recv()
+    code, res = self.recv()
     print(res)
 
     # self.send('SYST')
     # res = self.recv()
     # print('Server system: %s' % res)
 
-    code = int(res.split()[0])
     if code == 220: # success connect
       uname = input('username: ')
       code, res = self.xchg('USER ' + uname)
@@ -107,11 +106,24 @@ class Client(object):
 
   def command_recv(self, arg):
     if self.mode == 'pasv':
-      self.pasv()
+      ip, port = self.pasv()
     elif self.mode == 'port':
       pass
     else:
       print('Error in Client.command_recv: illegal mode')
+      return
+
+    if ip and port:
+      data_sock = socket.socket()
+      data_sock.connect((ip, port))
+      with open(arg, 'wb') as f:
+        data = data_sock.recv(self.buf_size)
+        while data:
+          f.write(data)
+          data = data_sock.recv(self.buf_size)
+      code, res = self.recv()
+      print(res)
+
 
   def command_help(self, arg):
     print('Supported commands:')
