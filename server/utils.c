@@ -67,7 +67,7 @@ int recv_file(int des_fd, int src_fd)
     return 1;
   } else {
     sprintf(error_buf, ERROR_PATT, "read", "recv_file");
-      perror(error_buf);
+    perror(error_buf);
     return -1;
   }
 }

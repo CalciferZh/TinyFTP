@@ -40,7 +40,7 @@ class Client(object):
 
   def send(self, data):
     # self.sock.sendall(bytes(data, encoding='ascii'))
-    self.sock.send(bytes(data + '\r\n', encoding='ascii'))
+    self.sock.sendall(bytes(data + '\r\n', encoding='ascii'))
 
   def recv(self):
     res = self.sock.recv(self.buf_size).decode('ascii').strip()
@@ -85,6 +85,9 @@ class Client(object):
       data_sock.connect((ip, port))
       code, res = self.recv()
       print(res)
+      if (code != 150):
+        data_sock.close()
+        data_sock = None;
     else:
       print('Error in Client.data_connect: no ip or port')
     
@@ -95,6 +98,9 @@ class Client(object):
     self.hport = 21
     if len(arg) > 1:
       self.hport = int(arg[1])
+    if self.logged:
+      print('Error: you are connected, please close first.')
+      return
     self.sock.connect((self.hip, self.hport))
     code, res = self.recv()
     print(res)
@@ -134,14 +140,27 @@ class Client(object):
         while data:
           f.write(data)
           data = data_sock.recv(self.buf_size)
+      data_sock.close()
       code, res = self.recv()
       print(res)
-      data_sock.close()
     else:
       print('Error in Client.command_recv: no data_sock')
 
   def command_send(self, arg):
-    pass
+    arg = ''.join(arg)
+    data_sock = self.data_connect('STOR ' + arg)
+    if data_sock:
+      with open(arg, 'rb') as f:
+        data_sock.sendall(f.read())
+        # data = f.read(self.buf_size)
+        # while data:
+        #   data_sock.sendall(data)
+        #   data = f.read(self.buf_size)
+      data_sock.close()
+      code, res = self.recv()
+      print(res)
+    else:
+      print('Error in Client.command_send: no data_sock')
 
   def command_ls(self, arg):
     arg = ''.join(arg)
