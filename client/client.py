@@ -1,17 +1,19 @@
 import socket
 import re
 import os
+import random
 
 class Client(object):
   """ftp client"""
   def __init__(self):
-    self.hip = None
+    self.hip = None # server ip
     self.hport = None
     self.sock = None
     self.buf_size = 8192
     self.logged = False
     self.mode = 'pasv'
     self.append = False
+    self.lip = None # local ip
 
   def extract_addr(self, string):
     ip = None
@@ -63,33 +65,54 @@ class Client(object):
     port = None
     if code == 227:
       ip, port = self.extract_addr(res)
-
     return ip, port
 
+  def port(self):
+    lport = random.randint(20000, 65535)
+    p1 = lport // 256
+    p2 = lport % 256
+    ip = self.lip.replace('.', ',')
+    code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2))
+    print(res)
+    if code // 100 == 2:
+      lstn_sock = socket.socket()
+      lstn_sock.bind(('', lport))
+      lstn_sock.listen(10)
+      return lstn_sock
+    else:
+      return None
+
   def data_connect(self, msg):
-    ip = None
-    port = None
+    data_sock = None
     if self.mode == 'pasv':
       ip, port = self.pasv()
+      self.send(msg)
+      if ip and port:
+        data_sock = socket.socket()
+        data_sock.connect((ip, port))
+        code, res = self.recv()
+        print(res)
+        if (code != 150):
+          data_sock.close()
+          data_sock = None;
+      else:
+        print('Error in Client.data_connect: no ip or port')
     elif self.mode == 'port':
-      pass
+      lstn_sock = self.port()
+      self.send(msg)
+      if lstn_sock:
+        data_sock, _ = lstn_sock.accept()
+        lstn_sock.close()
+        code, res = self.recv()
+        print(res)
+      else:
+        print('Error in Client.data_connect: no lstn_sock')
     else:
       print('Error in Client.data_connect: illegal mode')
 
     # code, res = self.xchg(msg)
     # code = 150
-    self.send(msg)
-    data_sock = None
-    if ip and port:
-      data_sock = socket.socket()
-      data_sock.connect((ip, port))
-      code, res = self.recv()
-      print(res)
-      if (code != 150):
-        data_sock.close()
-        data_sock = None;
-    else:
-      print('Error in Client.data_connect: no ip or port')
+
     
     return data_sock
 
@@ -126,8 +149,10 @@ class Client(object):
             # but we'll still use binary =)
             print('server refused using binary.')
         else:
+          print(res)
           print('login failed')
       else:
+        print(res)
         print('login failed')
     else:
       print('connection fail due to server')
@@ -248,7 +273,7 @@ class Client(object):
     try:
       offset = os.path.getsize(''.join(arg))
       code, res = self.xchg('REST %d' % offset)
-      if code / 100 == 2:
+      if code // 100 == 2:
         self.append = True
       else:
         print('server rejected resume')
@@ -258,11 +283,16 @@ class Client(object):
 
   def command_pasv(self, arg):
     self.mode = 'pasv'
+    print('switch to pasv mode')
 
   def command_port(self, arg):
     self.mode = 'port'
+    print('switch to part mode')
+    print('ip address %s' % self.lip)
 
   def run(self):
+    self.lip = socket.gethostbyname(socket.gethostname())
+    print('ftp client start, ip addr %s' % self.lip)
     flag = None
     while not flag:
       cmd = input('ftp > ').split()
