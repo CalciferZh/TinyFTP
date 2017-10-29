@@ -80,17 +80,16 @@ class Client(object):
       print('Error in Client.data_connect: illegal mode')
 
     # code, res = self.xchg(msg)
-    code = 150
+    # code = 150
+    self.send(msg)
     data_sock = None
-    if code == 150:
-      if ip and port:
-        data_sock = socket.socket()
-        data_sock.connect((ip, port))
-      else:
-        print('Error in Client.data_connect: no ip or port')
-    else:
+    if ip and port:
+      data_sock = socket.socket()
+      data_sock.connect((ip, port))
+      code, res = self.recv()
       print(res)
-      print('Error in Client.data_connect: server rejected request')
+    else:
+      print('Error in Client.data_connect: no ip or port')
     
     return data_sock
 
@@ -113,7 +112,7 @@ class Client(object):
       if code == 331: # ask for password
         pwd = input('password: ')
         code, res = self.xchg('PASS ' + pwd)
-        if code == 230: # login success
+        if code // 100 == 2: # login success
           print('login successful as %s' % uname)
           self.logged = True
           code, res = self.xchg('TYPE I')
@@ -154,6 +153,7 @@ class Client(object):
       packet = data_sock.recv(self.buf_size)
       while packet:
         data += packet.decode('ascii').strip()
+        packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
       print(res)
