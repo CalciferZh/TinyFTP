@@ -7,7 +7,7 @@ class Client(object):
   def __init__(self):
     self.hip = None
     self.hport = None
-    self.sock = socket.socket()
+    self.sock = None
     self.buf_size = 8192
     self.logged = False
     self.mode = 'pasv'
@@ -100,6 +100,7 @@ class Client(object):
     if self.logged:
       print('Error: you are connected, please close first.')
       return
+    self.sock = socket.socket()
     self.sock.connect((self.hip, self.hport))
     code, res = self.recv()
     print(res)
@@ -190,11 +191,34 @@ class Client(object):
   def command_close(self, arg):
     code, res = self.xchg('QUIT')
     print(res)
-    self.logged= False
+    self.sock.close()
+    self.logged = False
 
   def command_bye(self, arg):
+    if self.logged:
+      self.command_close('')
     print('bye')
     return True
+
+  def command_nlist(self, arg):
+    arg = ''.join(arg)
+    if len(arg) == 0:
+      arg = './'
+    else:
+      arg = arg[0]
+    data_sock = self.data_connect('NLST ' + arg)
+    if data_sock:
+      data = ""
+      packet = data_sock.recv(self.buf_size)
+      while packet:
+        data += packet.decode('ascii').strip()
+        packet = data_sock.recv(self.buf_size)
+      print(data)
+      code, res = self.recv()
+      print(res)
+      data_sock.close()
+    else:
+      print('Error in Client.command_ls: no data_sock')
 
   def run(self):
     flag = None
@@ -204,7 +228,8 @@ class Client(object):
       cmd = cmd[0]
       try:
         flag = getattr(self, "command_%s" % cmd)(arg)
-      except:
+      except Exception as e:
+        print(str(e))
         print('invalid command')
 
 
