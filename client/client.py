@@ -1,4 +1,5 @@
 import socket
+import re
 import logging
 
 class Client(object):
@@ -9,9 +10,36 @@ class Client(object):
     self.sock = socket.socket()
     self.buf_size = 8192
     self.logged = False
+    self.mode = 'pasv'
     self.commands = [
       'open'
     ]
+
+  def extract_addr(self, string):
+    ip = None
+    port = None
+
+    result = re.findall(r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\,){5}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b", string)
+    if len(result) != 1:
+      print('client failed to find valid address in %s', string)
+      return ip, port
+
+    addr = result[0].replace(',', '.')
+
+    # split ip addr and port number
+    idx = -1
+    for i in range(4):
+      idx = addr.find('.', idx + 1)
+
+    ip = addr[:idx]
+    port = addr[idx + 1:]
+
+    idx = port.find('.')
+    p1 = int(port[:idx])
+    p2 = int(port[idx + 1:])
+    port = int(p1 * 256 + p2)
+
+    return ip, port
 
   def send(self, data):
     # self.sock.sendall(bytes(data, encoding='ascii'))
@@ -31,7 +59,16 @@ class Client(object):
     code = int(res.split()[0])
     return code, res
 
+  def pasv(self):
+    code, res = self.xchg('PASV')
+    print(res)
+    ip = None
+    port = None
+    if code == 227:
+      ip, port = self.extract_addr(res)
 
+    return ip, port
+    
   def command_open(self, arg):
     self.hip = arg[0]
     self.hport = 21
@@ -67,6 +104,14 @@ class Client(object):
         print('login failed')
     else:
       print('connection fail due to server')
+
+  def command_recv(self, arg):
+    if self.mode == 'pasv':
+      self.pasv()
+    elif self.mode == 'port':
+      pass
+    else:
+      print('Error in Client.command_recv: illegal mode')
 
   def command_help(self, arg):
     print('Supported commands:')
