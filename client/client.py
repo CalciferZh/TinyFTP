@@ -1,6 +1,6 @@
 import socket
 import re
-import logging
+import os
 
 class Client(object):
   """ftp client"""
@@ -11,6 +11,7 @@ class Client(object):
     self.buf_size = 8192
     self.logged = False
     self.mode = 'pasv'
+    self.append = False
 
   def extract_addr(self, string):
     ip = None
@@ -135,11 +136,19 @@ class Client(object):
     arg = ''.join(arg)
     data_sock = self.data_connect('RETR ' + arg)
     if data_sock:
-      with open(arg, 'wb') as f:
+      f = None
+      if self.append:
+        f = open(arg, 'ab')
+        self.append = False
+        print('resuming transfer...')
+      else:
+        f = open(arg, 'wb')
+      data = data_sock.recv(self.buf_size)
+      while data:
+        f.write(data)
         data = data_sock.recv(self.buf_size)
-        while data:
-          f.write(data)
-          data = data_sock.recv(self.buf_size)
+      f.close()
+
       data_sock.close()
       code, res = self.recv()
       print(res)
@@ -234,6 +243,24 @@ class Client(object):
     arg = ''.join(arg)
     code, res = self.xchg('CWD ' + arg)
     print(res)
+
+  def command_resume(self, arg):
+    try:
+      offset = os.path.getsize(''.join(arg))
+      code, res = self.xchg('REST %d' % offset)
+      if code / 100 == 2:
+        self.append = True
+      else:
+        print('server rejected resume')
+      self.command_recv(arg)
+    except Exception as e:
+      print(str(e))
+
+  def command_pasv(self, arg):
+    self.mode = 'pasv'
+
+  def command_port(self, arg):
+    self.mode = 'port'
 
   def run(self):
     flag = None

@@ -17,22 +17,22 @@ int send_msg(int connfd, char* message)
   return 0;
 }
 
-int send_file(int des_fd, int src_fd)
+int send_file(int des_fd, int src_fd, int offset)
 {
   struct stat stat_buf;
   fstat(src_fd, &stat_buf);
+  lseek(src_fd, offset, SEEK_SET);
 
   int to_read, fin_read;
   char buf[DATA_BUF_SIZE];
 
-  int remain = stat_buf.st_size;
+  int remain = stat_buf.st_size - offset;
   printf("Start file transfer...\n");
-  printf("%d remained...\n", remain);
+  printf("%d bytes to send...\n", remain);
 
   while (remain > 0) {
     to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
     fin_read = read(src_fd, buf, to_read);
-    printf("Read %d bytes...\n", fin_read);
     if (fin_read < 0) {
       sprintf(error_buf, ERROR_PATT, "read", "send_file");
       perror(error_buf);
@@ -44,7 +44,6 @@ int send_file(int des_fd, int src_fd)
       return -1;
     }
     remain -= fin_read;
-    printf("%d remained...\n", remain);
   }
   printf("Transfer success!\n");
   return 0;
@@ -458,14 +457,13 @@ int command_retr(struct ServerState* state, char* path)
     send_msg(connfd, RES_TRANS_NREAD);
     return -1;
   }
-  lseek(src_fd, state->offset, SEEK_SET);
 
   if (connect_by_mode(state) != 0) {
     return -1;
   }
 
   send_msg(connfd, RES_TRANS_START);
-  if (send_file(state->data_fd, src_fd) == 0) {
+  if (send_file(state->data_fd, src_fd, state->offset) == 0) {
     send_msg(connfd, RES_TRANS_SUCCESS);
   } else {
     send_msg(connfd, RES_TRANS_FAIL);
