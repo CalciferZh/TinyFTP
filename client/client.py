@@ -23,15 +23,12 @@ class Client(object):
 
   def xchg(self, msg):
     """exchange message: send server the msg and return response"""
-    try:
-      print("I'm here 000")
-      self.send(msg)
-      print("I'm here 111")
-      res = self.recv()
-      print("I'm here 222")
-    except Exception as e:
-      print('Error in Client.xchg' + str(e))
-      code = int(res.split()[0])
+    # try:
+    self.send(msg)
+    res = self.recv()
+    # except Exception as e:
+    #   print('Error in Client.xchg' + str(e))
+    code = int(res.split()[0])
     return code, res
 
 
@@ -51,20 +48,25 @@ class Client(object):
     code = int(res.split()[0])
     if code == 220: # success connect
       uname = input('username: ')
-      pwd = input('password: ')
-
-      self.send('USER ' + uname)
-      self.send('PASS ' + pwd)
-      res = self.recv()
-
-      if code == 220:
-        print('login success as %s' % uname)
-        self.logged = True
+      code, res = self.xchg('USER ' + uname)
+      if code == 331: # ask for password
+        pwd = input('password: ')
+        code, res = self.xchg('PASS ' + pwd)
+        if code == 230: # login success
+          print('login successful as %s' % uname)
+          self.logged = True
+          code, res = self.xchg('TYPE I')
+          if code == 200: # use binay
+            print('using binary.')
+          else:
+            # but we'll still use binary =)
+            print('server refused using binary.')
+        else:
+          print('login failed')
       else:
         print('login failed')
-
     else:
-      print('connect fail due to server')
+      print('connection fail due to server')
 
   def command_help(self, arg):
     print('Supported commands:')
