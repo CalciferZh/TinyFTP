@@ -7,7 +7,7 @@ server: server_app
 	cp ../server_app ./server
 
 server_app: server.o utils.o
-	$(CC) $(CFLAGS) server.o utils.o -o ../server_app
+	$(CC) $(CFLAGS) server.o utils.o -o ../server_app -lpthread
 
 server.o: server.c
 	$(CC) $(CFLAGS) -c server.c -o server.o

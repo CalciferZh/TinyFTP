@@ -56,11 +56,10 @@ int send_file_mt(int des_fd, int src_fd, int offset)
   lseek(src_fd, offset, SEEK_SET);
 
   int to_read;
-  int fin_write;
   int fin_read_1;
   int fin_read_2;
   char buf_1[DATA_BUF_SIZE];
-  char buf_2[DATA_BUF_SIZE]
+  char buf_2[DATA_BUF_SIZE];
 
   int remain = stat_buf.st_size - offset;
 
@@ -69,7 +68,7 @@ int send_file_mt(int des_fd, int src_fd, int offset)
 
   pthread_t pid;
 
-  struct io_para arg;
+  struct write_para arg;
 
   to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
   fin_read_1 = read(src_fd, buf_1, to_read);
