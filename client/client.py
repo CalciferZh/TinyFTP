@@ -280,7 +280,7 @@ class Client(object):
     try:
       offset = os.path.getsize(''.join(arg))
       code, res = self.xchg('REST %d' % offset)
-      if code // 100 == 2:
+      if code // 100 == 2 or code // 100 == 3:
         self.append = True
       else:
         print('server rejected resume')

@@ -86,7 +86,7 @@
 #define RES_ACCEPT_RMD         "250 Command RMD accepted.\r\n"
 #define RES_REJECT_RMD         "550 Command RMD rejected.\r\n"
 
-#define RES_ACCEPT_REST        "200 Command REST accepted.\r\n"
+#define RES_ACCEPT_REST        "350 Command REST accepted.\r\n"
 #define RES_REJECT_REST        "500 Command REST rejected.\r\n"
 
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
