@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <pthread.h>
 #include <net/if.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -31,6 +32,7 @@
 #define CWD_CODE  14
 #define RMD_CODE  15
 #define REST_CODE 16
+#define MULT_CODE 17
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -49,6 +51,7 @@
 #define CWD_COMMAND  "cwd"
 #define RMD_COMMAND  "rmd"
 #define REST_COMMAND "rest"
+#define MULT_COMMAND "mult"
 
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
@@ -89,6 +92,9 @@
 #define RES_ACCEPT_REST        "350 Command REST accepted.\r\n"
 #define RES_REJECT_REST        "500 Command REST rejected.\r\n"
 
+#define RES_MULTIT_ON          "200 Switch to multi-thread mode.\r\n"
+#define RES_MULTIT_OFF         "200 Switch to single-thread mode.\r\n"
+
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
@@ -118,8 +124,16 @@ struct ServerState
   int hport;
   int binary_flag;
   int offset;
+  int thread;
   char hip[32];
   struct sockaddr_in target_addr;
+};
+
+struct write_para
+{
+  int des_fd;
+  char* buf;
+  int size;
 };
 
 // a secured method to send message
@@ -176,6 +190,8 @@ int command_cwd(struct ServerState* state, char* path);
 int command_rmd(struct ServerState* state, char* path);
 
 int command_rest(struct ServerState* state, char* content);
+
+int command_mult(struct ServerState* state);
 
 int get_random_port(int* p1, int* p2);
 

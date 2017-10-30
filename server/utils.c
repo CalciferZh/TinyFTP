@@ -49,6 +49,81 @@ int send_file(int des_fd, int src_fd, int offset)
   return 0;
 }
 
+int send_file_mt(int des_fd, int src_fd, int offset)
+{
+  struct stat stat_buf;
+  fstat(src_fd, &stat_buf);
+  lseek(src_fd, offset, SEEK_SET);
+
+  int to_read;
+  int fin_write;
+  int fin_read_1;
+  int fin_read_2;
+  char buf_1[DATA_BUF_SIZE];
+  char buf_2[DATA_BUF_SIZE]
+
+  int remain = stat_buf.st_size - offset;
+
+  printf("Start file transfer...\n");
+  printf("%d bytes to send...\n", remain);
+
+  pthread_t pid;
+
+  struct io_para arg;
+
+  to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+  fin_read_1 = read(src_fd, buf_1, to_read);
+  if (fin_read_1 < 0) {
+    sprintf(error_buf, ERROR_PATT, "read", "send_file");
+    perror(error_buf);
+    return -1;
+  }
+  remain -= fin_read_1;
+
+  arg.des_fd = des_fd;
+  // at least run once to sendout buf_1
+  while (remain > 0) {
+    // new thread to send buf_1
+    arg.buf = buf_1;
+    arg.size = fin_read_1;
+    pthread_create(&pid, NULL, (void *)write, (void *)&arg);
+
+    // at the same time fill buf_2
+    to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+    fin_read_2 = read(src_fd, buf_2, to_read);
+    if (fin_read_2 < 0) {
+      sprintf(error_buf, ERROR_PATT, "read", "send_file");
+      perror(error_buf);
+      return -1;
+    }
+    remain -= fin_read_2;
+
+    // sync
+    pthread_join(pid, NULL);
+
+    // new thread to send buf_2
+    arg.buf = buf_2;
+    arg.size = fin_read_2;
+    pthread_create(&pid, NULL, (void *)write, (void *)&arg);
+
+    // at the same time fill buf_1
+    to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+    fin_read_1 = read(src_fd, buf_1, to_read);
+    if (fin_read_1 < 0) {
+      sprintf(error_buf, ERROR_PATT, "read", "send_file");
+      perror(error_buf);
+      return -1;
+    }
+    remain -= fin_read_1;
+
+    // sync
+    pthread_join(pid, NULL);
+  }
+  write(des_fd, buf_1, fin_read_1);
+  printf("Transfer success!\n");
+  return 0;
+}
+
 int recv_file(int des_fd, int src_fd)
 {
   int len;
@@ -180,6 +255,9 @@ int parse_command(char* message, char* content)
   }
   else if (strcmp(command, REST_COMMAND) == 0) {
     ret = REST_CODE;
+  }
+  else if (strcmp(command, MULT_COMMAND) == 0) {
+    ret = MULT_CODE;
   }
   return ret;
 }
@@ -609,6 +687,18 @@ int command_rest(struct ServerState* state, char* content)
   } else {
     state->offset = 0;
     send_msg(state->command_fd, RES_REJECT_REST);
+  }
+  return 0;
+}
+
+int command_mult(struct ServerState* state)
+{
+  if (state->thread == 1) {
+    state->thread = 2;
+    send_msg(state->command_fd, RES_MULTIT_ON);
+  } else {
+    state->thread = 1;
+    send_msg(state->command_fd, RES_MULTIT_OFF);
   }
   return 0;
 }
