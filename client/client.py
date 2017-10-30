@@ -2,6 +2,7 @@ import socket
 import re
 import os
 import random
+import time
 
 class Client(object):
   """ftp client"""
@@ -168,15 +169,20 @@ class Client(object):
         print('resuming transfer...')
       else:
         f = open(arg, 'wb')
+
+      t = time.time()
       data = data_sock.recv(self.buf_size)
+      total = len(data)
       while data:
         f.write(data)
         data = data_sock.recv(self.buf_size)
+        total += len(data)
       f.close()
-
       data_sock.close()
       code, res = self.recv()
+      t = time.time() - t
       print(res)
+      print('%dkb in %f seconds, %fkb/s in avg' % (total, t, total / t / 1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
 
@@ -184,15 +190,16 @@ class Client(object):
     arg = ''.join(arg)
     data_sock = self.data_connect('STOR ' + arg)
     if data_sock:
+      t = time.time()
       with open(arg, 'rb') as f:
         data_sock.sendall(f.read())
-        # data = f.read(self.buf_size)
-        # while data:
-        #   data_sock.sendall(data)
-        #   data = f.read(self.buf_size)
       data_sock.close()
       code, res = self.recv()
+      t = time.time() - t
       print(res)
+      total = os.path.getsize(arg)
+      print('%dkb in %f seconds, %fkb/s in avg' % \
+        (total, t, total / (t+1e-4) / 1e3))
     else:
       print('Error in Client.command_send: no data_sock')
 
@@ -231,7 +238,7 @@ class Client(object):
   def command_bye(self, arg):
     if self.logged:
       self.command_close('')
-    print('bye')
+    print('good luck')
     return True
 
   def command_nlist(self, arg):
