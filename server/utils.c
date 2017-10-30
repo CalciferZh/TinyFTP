@@ -565,11 +565,17 @@ int command_retr(struct ServerState* state, char* path)
   send_msg(connfd, RES_TRANS_START);
 
   int flag;
+  struct timespec t1, t2;
+  clock_gettime(CLOCK_MONOTONIC, &t1);
   if (state->thread == 1) {
     flag = send_file(state->data_fd, src_fd, state->offset);
   } else {
     flag = send_file_mt(state->data_fd, src_fd, state->offset);
   }
+  clock_gettime(CLOCK_MONOTONIC, &t2);
+  int delta = (int)((t2.tv_sec - t1.tv_sec) * 1000 + (t2.tv_nsec - t1.tv_nsec) / 1000000);
+
+  printf("finish sending, time cost %dms\n", delta);
 
   if (flag == 0) {
     send_msg(connfd, RES_TRANS_SUCCESS);

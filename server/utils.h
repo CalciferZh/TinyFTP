@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define USER_CODE 0
 #define PASS_CODE 1
