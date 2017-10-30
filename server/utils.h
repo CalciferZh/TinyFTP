@@ -114,6 +114,7 @@
 #define ERROR_PATT             "Error %s() in %s()"
 
 #define DATA_BUF_SIZE 8192
+#define DATA_BUF_SIZE_LARGE 1048576
 
 struct ServerState
 {

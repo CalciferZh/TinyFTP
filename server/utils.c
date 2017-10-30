@@ -68,8 +68,8 @@ int send_file_mt(int des_fd, int src_fd, int offset)
   int to_read;
   int fin_read_1;
   int fin_read_2;
-  char buf_1[DATA_BUF_SIZE];
-  char buf_2[DATA_BUF_SIZE];
+  char buf_1[DATA_BUF_SIZE_LARGE];
+  char buf_2[DATA_BUF_SIZE_LARGE];
 
   int remain = stat_buf.st_size - offset;
 
