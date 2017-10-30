@@ -297,6 +297,10 @@ class Client(object):
     print('switch to part mode')
     print('ip address %s' % self.lip)
 
+  def command_mult(self, arg):
+    code, res = self.xchg('MULT')
+    print(res)
+
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
     print('ftp client start, ip addr %s' % self.lip)

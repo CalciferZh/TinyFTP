@@ -144,6 +144,10 @@ int read_msg(int connfd, char* message);
 
 int send_file(int des_fd, int src_fd, int offset);
 
+void write_thread(void* arg);
+
+int send_file_mt(int des_fd, int src_fd, int offset);
+
 void str_lower(char* str);
 
 void str_replace(char* str, char src, char des);

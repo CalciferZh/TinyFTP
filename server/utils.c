@@ -19,6 +19,8 @@ int send_msg(int connfd, char* message)
 
 int send_file(int des_fd, int src_fd, int offset)
 {
+  printf("preparing to send file in single-thread mode...\n");
+
   struct stat stat_buf;
   fstat(src_fd, &stat_buf);
   lseek(src_fd, offset, SEEK_SET);
@@ -49,8 +51,16 @@ int send_file(int des_fd, int src_fd, int offset)
   return 0;
 }
 
+void write_thread(void* arg)
+{
+  struct write_para* para = (struct write_para*)arg;
+  write(para->des_fd, para->buf, para->size);
+}
+
 int send_file_mt(int des_fd, int src_fd, int offset)
 {
+  printf("preparing to send file in multi-thread mode...\n");
+
   struct stat stat_buf;
   fstat(src_fd, &stat_buf);
   lseek(src_fd, offset, SEEK_SET);
@@ -67,6 +77,8 @@ int send_file_mt(int des_fd, int src_fd, int offset)
   printf("%d bytes to send...\n", remain);
 
   pthread_t pid;
+
+  int ret;
 
   struct write_para arg;
 
@@ -85,13 +97,18 @@ int send_file_mt(int des_fd, int src_fd, int offset)
     // new thread to send buf_1
     arg.buf = buf_1;
     arg.size = fin_read_1;
-    pthread_create(&pid, NULL, (void *)write, (void *)&arg);
+    ret = pthread_create(&pid, NULL, (void*)write_thread, (void *)&arg);
+    if (ret) {
+      sprintf(error_buf, ERROR_PATT, "pthread_create", "send_file_mt");
+      perror(error_buf);
+      return -1;
+    }
 
     // at the same time fill buf_2
     to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
     fin_read_2 = read(src_fd, buf_2, to_read);
     if (fin_read_2 < 0) {
-      sprintf(error_buf, ERROR_PATT, "read", "send_file");
+      sprintf(error_buf, ERROR_PATT, "read", "send_file_mt");
       perror(error_buf);
       return -1;
     }
@@ -103,13 +120,18 @@ int send_file_mt(int des_fd, int src_fd, int offset)
     // new thread to send buf_2
     arg.buf = buf_2;
     arg.size = fin_read_2;
-    pthread_create(&pid, NULL, (void *)write, (void *)&arg);
+    ret = pthread_create(&pid, NULL, (void*)write_thread, (void *)&arg);
+    if (ret) {
+      sprintf(error_buf, ERROR_PATT, "pthread_create", "send_file_mt");
+      perror(error_buf);
+      return -1;
+    }
 
     // at the same time fill buf_1
     to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
     fin_read_1 = read(src_fd, buf_1, to_read);
     if (fin_read_1 < 0) {
-      sprintf(error_buf, ERROR_PATT, "read", "send_file");
+      sprintf(error_buf, ERROR_PATT, "read", "send_file_mt");
       perror(error_buf);
       return -1;
     }
@@ -119,6 +141,7 @@ int send_file_mt(int des_fd, int src_fd, int offset)
     pthread_join(pid, NULL);
   }
   write(des_fd, buf_1, fin_read_1);
+
   printf("Transfer success!\n");
   return 0;
 }
@@ -540,7 +563,15 @@ int command_retr(struct ServerState* state, char* path)
   }
 
   send_msg(connfd, RES_TRANS_START);
-  if (send_file(state->data_fd, src_fd, state->offset) == 0) {
+
+  int flag;
+  if (state->thread == 1) {
+    flag = send_file(state->data_fd, src_fd, state->offset);
+  } else {
+    flag = send_file_mt(state->data_fd, src_fd, state->offset);
+  }
+
+  if (flag == 0) {
     send_msg(connfd, RES_TRANS_SUCCESS);
   } else {
     send_msg(connfd, RES_TRANS_FAIL);
