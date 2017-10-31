@@ -3,6 +3,7 @@ import re
 import os
 import random
 import time
+import ctypes
 
 class Client(object):
   """ftp client"""
@@ -12,9 +13,26 @@ class Client(object):
     self.sock = None
     self.buf_size = 8192
     self.logged = False
+    self.lip = None # local ip
     self.mode = 'pasv'
     self.append = False
-    self.lip = None # local ip
+    self.encrypt = False
+    self.rsalib = ctypes.CDLL('./librsa.so')
+    self.rsalib.decodeStringChar.restype = ctypes.c_char_p
+    self.rsalib.encodeStringChar.restype = ctypes.c_char_p
+    self.pub_exp = None
+    self.pub_mod = None
+    self.bts = None
+
+  def decode(self, msg):
+    ret = self.rsalib.decodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
+    ret = ret.decode('ascii')
+    return ret
+
+  def encode(self, msg):
+    ret = self.rsalib.encodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
+    ret = ret.decode('ascii')
+    return ret;
 
   def extract_addr(self, string):
     ip = None
@@ -43,10 +61,15 @@ class Client(object):
     return ip, port
 
   def send(self, msg):
-    self.sock.sendall(bytes(msg + '\r\n', encoding='ascii'))
+    msg += '\r\n';
+    if self.encrypt:
+      msg = self.encode(msg)
+    self.sock.send(bytes(msg, encoding='ascii'))
 
   def recv(self):
     res = self.sock.recv(self.buf_size).decode('ascii').strip()
+    if self.encrypt:
+      res = self.decode(res)
     code = int(res.split()[0])
     return code, res
 
@@ -61,7 +84,7 @@ class Client(object):
 
   def pasv(self):
     code, res = self.xchg('PASV')
-    print(res)
+    print(res.strip())
     ip = None
     port = None
     if code == 227:
@@ -74,7 +97,7 @@ class Client(object):
     p2 = lport % 256
     ip = self.lip.replace('.', ',')
     code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2))
-    print(res)
+    print(res.strip())
     if code // 100 == 2:
       lstn_sock = socket.socket()
       lstn_sock.bind(('', lport))
@@ -92,7 +115,7 @@ class Client(object):
         data_sock = socket.socket()
         data_sock.connect((ip, port))
         code, res = self.recv()
-        print(res)
+        print(res.strip())
         if (code != 150):
           data_sock.close()
           data_sock = None;
@@ -105,7 +128,7 @@ class Client(object):
         data_sock, _ = lstn_sock.accept()
         lstn_sock.close()
         code, res = self.recv()
-        print(res)
+        print(res.strip())
       else:
         print('Error in Client.data_connect: no lstn_sock')
     else:
@@ -128,7 +151,7 @@ class Client(object):
     self.sock = socket.socket()
     self.sock.connect((self.hip, self.hport))
     code, res = self.recv()
-    print(res)
+    print(res.strip())
 
     # self.send('SYST')
     # res = self.recv()
@@ -150,10 +173,10 @@ class Client(object):
             # but we'll still use binary =)
             print('server refused using binary.')
         else:
-          print(res)
+          print(res.strip())
           print('login failed')
       else:
-        print(res)
+        print(res.strip())
         print('login failed')
     else:
       print('connection fail due to server')
@@ -181,7 +204,7 @@ class Client(object):
       data_sock.close()
       code, res = self.recv()
       t = time.time() - t
-      print(res)
+      print(res.strip())
       print('%dkb in %f seconds, %fkb/s in avg' % (total, t, total / t / 1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
@@ -192,11 +215,11 @@ class Client(object):
     if data_sock:
       t = time.time()
       with open(arg, 'rb') as f:
-        data_sock.sendall(f.read())
+        data_sock.send(f.read())
       data_sock.close()
       code, res = self.recv()
       t = time.time() - t
-      print(res)
+      print(res.strip())
       total = os.path.getsize(arg)
       print('%dkb in %f seconds, %fkb/s in avg' % \
         (total, t, total / (t+1e-4) / 1e3))
@@ -218,7 +241,7 @@ class Client(object):
         packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
-      print(res)
+      print(res.strip())
       data_sock.close()
     else:
       print('Error in Client.command_ls: no data_sock')
@@ -231,9 +254,9 @@ class Client(object):
 
   def command_close(self, arg):
     code, res = self.xchg('QUIT')
-    print(res)
+    print(res.strip())
     self.sock.close()
-    self.logged = False
+    self.__init__()
 
   def command_bye(self, arg):
     if self.logged:
@@ -256,7 +279,7 @@ class Client(object):
         packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
-      print(res)
+      print(res.strip())
       data_sock.close()
     else:
       print('Error in Client.command_ls: no data_sock')
@@ -264,17 +287,17 @@ class Client(object):
   def command_mkdir(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('MKD ' + arg)
-    print(res)
+    print(res.strip())
 
   def command_rm(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('RMD ' + arg)
-    print(res)
+    print(res.strip())
 
   def command_cd(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('CWD ' + arg)
-    print(res)
+    print(res.strip())
 
   def command_resume(self, arg):
     try:
@@ -299,11 +322,21 @@ class Client(object):
 
   def command_mult(self, arg):
     code, res = self.xchg('MULT')
-    print(res)
+    print(res.strip())
 
   def command_encry(self, arg):
-    code, res = self.xchg('ENCR')
-    print(res)
+    if self.encrypt:
+      self.send('ENCR')
+      self.encrypt = False
+      code, res = self.recv()
+      print(res.strip())
+    else:
+      code, res = self.xchg('ENCR')
+      self.encrypt = True
+      self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')
+      self.bts = int(self.bts)
+      code, res = self.recv()
+      print(res.strip())
 
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
