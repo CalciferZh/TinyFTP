@@ -1,3 +1,6 @@
+#ifndef __UTILS_H__
+#define __UTILS_H__
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/stat.h>
@@ -15,6 +18,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <time.h>
+#include "rsa.h"
 
 #define USER_CODE 0
 #define PASS_CODE 1
@@ -33,7 +37,8 @@
 #define CWD_CODE  14
 #define RMD_CODE  15
 #define REST_CODE 16
-#define MULT_CODE 17
+#define MULT_CODE 17 // multi-thread
+#define ENCR_CODE 18 // encrypt with rsa
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -53,6 +58,7 @@
 #define RMD_COMMAND  "rmd"
 #define REST_COMMAND "rest"
 #define MULT_COMMAND "mult"
+#define ENCR_COMMAND "encr"
 
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
@@ -96,6 +102,9 @@
 #define RES_MULTIT_ON          "200 Switch to multi-thread mode.\r\n"
 #define RES_MULTIT_OFF         "200 Switch to single-thread mode.\r\n"
 
+#define RES_ENCR_ON            "200 %s,%s\r\n"
+#define RES_ENCR_OFF           "200 Encrypt off"
+
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
@@ -127,7 +136,12 @@ struct ServerState
   int binary_flag;
   int offset;
   int thread;
+  int encrypt;
   char hip[32];
+  char* pub_exp;
+  char* pub_mod;
+  char* priv_exp;
+  char* priv_mod;
   struct sockaddr_in target_addr;
 };
 
@@ -199,7 +213,10 @@ int command_rest(struct ServerState* state, char* content);
 
 int command_mult(struct ServerState* state);
 
+int command_encr(struct ServerState* state);
+
 int get_random_port(int* p1, int* p2);
 
 char error_buf[128];
 
+#endif

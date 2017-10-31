@@ -1,6 +1,6 @@
-all: server_app
+all: server
 
-server_app:
+server:
 	cd ./server/ && make
 
 test:

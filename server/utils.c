@@ -281,6 +281,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, MULT_COMMAND) == 0) {
     ret = MULT_CODE;
   }
+  else if (strcmp(command, ENCR_COMMAND) == 0) {
+    ret = ENCR_CODE;
+  }
   return ret;
 }
 
@@ -735,6 +738,30 @@ int command_mult(struct ServerState* state)
   } else {
     state->thread = 1;
     send_msg(state->command_fd, RES_MULTIT_OFF);
+  }
+  return 0;
+}
+
+int command_encr(struct ServerState* state)
+{
+  if (state->encrypt == 1) {
+    state->thread = 0;
+    send_msg(state->command_fd, RES_ENCR_OFF);
+    free(state->pub_exp);
+    free(state->pub_mod);
+    free(state->priv_exp);
+    free(state->priv_mod);
+    state->pub_exp = NULL;
+    state->pub_mod = NULL;
+    state->priv_exp = NULL;
+    state->priv_mod = NULL;
+  } else {
+    state->encrypt = 1;
+    gen_rsa_key(&(state->pub_exp), &(state->pub_mod),
+      &(state->priv_exp), &(state->priv_mod));
+    char buf[1024];
+    sprintf(buf, RES_ENCR_ON, state->pub_exp, state->pub_mod);
+    send_msg(state->command_fd, buf);
   }
   return 0;
 }

@@ -301,6 +301,10 @@ class Client(object):
     code, res = self.xchg('MULT')
     print(res)
 
+  def command_encry(self, arg):
+    code, res = self.xchg('ENCR')
+    print(res)
+
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
     print('ftp client start, ip addr %s' % self.lip)

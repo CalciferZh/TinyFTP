@@ -99,6 +99,11 @@ int serve(int connfd)
   state.binary_flag = 1;
   state.offset = 0;
   state.thread = 1;
+  state.encrypt = 0;
+  state.pub_exp = NULL;
+  state.pub_mod = NULL;
+  state.priv_exp = NULL;
+  state.priv_mod = NULL;
   strcpy(state.hip, hip);
 
   int c_code = 0;
@@ -185,6 +190,10 @@ int serve(int connfd)
 
       case MULT_CODE:
         command_mult(&state);
+        break;
+
+      case ENCR_CODE:
+        command_encr(&state);
         break;
 
       default:
