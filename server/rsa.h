@@ -48,6 +48,12 @@ typedef struct _bignum {
 } bignum;
 
 
+int decodeString(char* src, char** des, bignum* exp, bignum* mod);
+int encodeString(char* src, char** des, bignum* exp, bignum* mod);
+char* decodeStringChar(char* src, char* exp, char* mod);
+char* encodeStringChar(char* src, char* exp, char* mod);
+void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
+
 char itoc(char i);
 void str_inverse(char* str);
 bignum* bignum_init();
@@ -87,10 +93,7 @@ int readFile(FILE* fd, char** buffer, int bytes);
 void encode(bignum* m, bignum* e, bignum* n, bignum* result);
 void decode(bignum* c, bignum* d, bignum* n, bignum* result);
 bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus);
-int encodeString(char* src, char** des, bignum* exp, bignum* mod);
 char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
-int decodeString(char* src, char** des, bignum* exp, bignum* mod);
-void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
 
 #endif
 

@@ -823,6 +823,49 @@ int encodeString(char* src, char** des, bignum* exp, bignum* mod) {
 	return 1;
 }
 
+char* encodeStringChar(char* src, char* exp_, char* mod_) {
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	bignum* encoded;
+
+	int len = strlen(src);
+	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
+	int sz = pck_num * BLOCK_SIZE;
+	char* cpy = (char*)malloc(sz);
+	strcpy(cpy, src);
+
+	// zero padding to a multiple of bytes
+	int i;
+	for (i = len; i < sz; ++i) {
+		cpy[i] = 0;
+	}
+	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
+
+	// here we only support to encrypt the first 94 bytes
+	// because I don't have time to finish them all
+	// so even "encoded" is a pointer to an array
+	// we only translate the first element
+	char* des = bignum_tostring(encoded);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("encode result: %s\n", des);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(encoded);
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+	free(cpy);
+	// the return value is how many packet we got
+	// return pck_num;
+	return des;
+}
+
 /**
  * Decode the cryptogram of given length, using the private key (exponent, modulus)
  * Each encrypted packet should represent "bytes" characters as per encodeMessage.
@@ -850,10 +893,37 @@ int decodeString(char* src, char** des, bignum* exp, bignum* mod) {
 	bignum_fromstring(data, src);
 
 	// similarly we decode the first block only
-	*des = decodeMessage(1, BLOCK_SIZE, data, exp, mod);
+	*des = decodeMessage(1, BLOCK_SIZE + 1, data, exp, mod);
 
 	bignum_deinit(data);
 	return 0;
+}
+
+char* decodeStringChar(char* src, char* exp_, char* mod_) {
+	bignum* data = bignum_init();
+	bignum_fromstring(data, src);
+
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	// similarly we decode the first block only
+	char* des = decodeMessage(1, BLOCK_SIZE, data, exp, mod);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("decode result: %s\n", des);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(data);
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+
+	return des;
 }
 
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {
@@ -913,115 +983,3 @@ void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum**
 	bignum_deinit(temp1);
 	bignum_deinit(temp2);
 }
-
-/**
- * Main method to demostrate the system. Sets up primes p, q, and proceeds to encode and
- * decode the message given in "text.txt"
- */
-// int sample(void) {
-// 	int i, bytes, len;
-// 	bignum *p = bignum_init(), *q = bignum_init(), *n = bignum_init();
-// 	bignum *phi = bignum_init(), *e = bignum_init(), *d = bignum_init();
-// 	bignum *bbytes = bignum_init(), *shift = bignum_init();
-// 	bignum *temp1 = bignum_init(), *temp2 = bignum_init();
-	
-// 	bignum *encoded;
-// 	int *decoded;
-// 	char *buffer;
-// 	FILE* f;
-	
-// 	randPrime(FACTOR_DIGITS, p);
-// 	printf("Got first prime factor, p = ");
-// 	bignum_print(p);
-// 	printf(" ... ");
-// 	getchar();
-	
-// 	randPrime(FACTOR_DIGITS, q);
-// 	printf("Got second prime factor, q = ");
-// 	bignum_print(q);
-// 	printf(" ... ");
-// 	getchar();
-	
-// 	bignum_multiply(n, p, q);
-// 	printf("Got modulus, n = pq = ");
-// 	bignum_print(n);
-// 	printf(" ... ");
-// 	getchar();
-	
-// 	bignum_subtract(temp1, p, &NUMS[1]);
-// 	bignum_subtract(temp2, q, &NUMS[1]);
-// 	bignum_multiply(phi, temp1, temp2); /* phi = (p - 1) * (q - 1) */
-// 	printf("Got totient, phi = ");
-// 	bignum_print(phi);
-// 	printf(" ... ");
-// 	getchar();
-	
-// 	randExponent(phi, EXPONENT_MAX, e);
-// 	printf("Chose public exponent, e = ");
-// 	bignum_print(e);
-// 	printf("\nPublic key is (");
-// 	bignum_print(e);
-// 	printf(", ");
-// 	bignum_print(n);
-// 	printf(") ... ");
-// 	getchar();
-	
-// 	bignum_inverse(e, phi, d);
-// 	printf("Calculated private exponent, d = ");
-// 	bignum_print(d);
-// 	printf("\nPrivate key is (");
-// 	bignum_print(d);
-// 	printf(", ");
-// 	bignum_print(n);
-// 	printf(") ... ");
-// 	getchar();
-	
-// 	 Compute maximum number of bytes that can be encoded in one encryption 
-// 	bytes = -1;
-// 	bignum_fromint(shift, 1 << 7); /* 7 bits per char */
-// 	bignum_fromint(bbytes, 1);
-// 	while(bignum_less(bbytes, n)) {
-// 		bignum_imultiply(bbytes, shift); /* Shift by one byte, NB: we use bitmask representative so this can actually be a shift... */
-// 		bytes++;
-// 	}
-
-// 	printf("Opening file \"text.txt\" for reading\n");
-// 	f = fopen("text.txt", "r");
-// 	if(f == NULL) {
-// 		printf("Failed to open file \"text.txt\". Does it exist?\n");
-// 		return EXIT_FAILURE;
-// 	}
-// 	len = readFile(f, &buffer, bytes); /* len will be a multiple of bytes, to send whole chunks */
-	
-// 	printf("File \"text.txt\" read successfully, %d bytes read. Encoding byte stream in chunks of %d bytes ... ", len, bytes);
-// 	getchar();
-// 	printf("\n");
-// 	encoded = encodeMessage(len, bytes, buffer, e, n);
-// 	printf("\n\nEncoding finished successfully ... ");
-// 	getchar();
-	
-// 	printf("Decoding encoded message ... ");
-// 	getchar();
-// 	printf("\n");
-// 	decoded = decodeMessage(len/bytes, bytes, encoded, d, n);
-// 	printf("\n\nFinished RSA demonstration!");
-	
-// 	/* Eek! This is why we shouldn't of calloc'd those! */
-// 	for(i = 0; i < len/bytes; i++) free(encoded[i].data);
-// 	free(encoded);
-// 	free(decoded);
-// 	free(buffer);
-// 	bignum_deinit(p);
-// 	bignum_deinit(q);
-// 	bignum_deinit(n);
-// 	bignum_deinit(phi);
-// 	bignum_deinit(e);
-// 	bignum_deinit(d);
-// 	bignum_deinit(bbytes);
-// 	bignum_deinit(shift);
-// 	bignum_deinit(temp1);
-// 	bignum_deinit(temp2);
-// 	fclose(f);
-	
-// 	return EXIT_SUCCESS;
-// }

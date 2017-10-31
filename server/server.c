@@ -111,15 +111,15 @@ int serve(int connfd)
   char message[4096];
   char content[4096];
 
-  send_msg(state.command_fd, RES_READY);
+  send_msg(&state, RES_READY);
 
   // loop routine
-  while ((len = read_msg(connfd, message))) {
+  while ((len = read_msg(&state, message))) {
     printf("%s", message);
     c_code = parse_command(message, content);
 
     if (!state.logged && c_code != USER_CODE && c_code != PASS_CODE) {
-      send_msg(connfd, RES_WANTUSER);
+      send_msg(&state, RES_WANTUSER);
       continue;
     }
 
@@ -133,7 +133,7 @@ int serve(int connfd)
         break;
 
       case XPWD_CODE:
-        send_msg(connfd, RES_WANTUSER);
+        send_msg(&state, RES_WANTUSER);
         break;
 
       case QUIT_CODE:
@@ -157,7 +157,7 @@ int serve(int connfd)
         command_stor(&state, content);
 
       case SYST_CODE:
-        send_msg(connfd, RES_SYSTEM);
+        send_msg(&state, RES_SYSTEM);
         break;
 
       case TYPE_CODE:
@@ -202,6 +202,6 @@ int serve(int connfd)
     }
   }
 
-  close(connfd);
+  close(state.command_fd);
   return 0;
 }

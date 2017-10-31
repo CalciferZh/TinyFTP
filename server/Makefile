@@ -1,16 +1,16 @@
 CC = gcc
 CFLAGS = -Wall
 
-all: server 
+all: server
 
 server: server.o utils.o rsa.o
-	$(CC) $(CFLAGS) server.o utils.o rsa.o -o ./server -lpthread
+	$(CC) $(CFLAGS) server.o utils.o rsa.o -o server -lpthread
 
 server.o: server.c
 	$(CC) $(CFLAGS) -c server.c -o server.o
 
 utils.o: utils.h utils.c
-	$(CC) $(CFLAGS) -c utils.c -o utils.o -lpthread
+	$(CC) $(CFLAGS) -c utils.c -o utils.o
 
 rsa.o: rsa.h rsa.c
 	$(CC) $(CFLAGS) -c rsa.c -o rsa.o
@@ -23,4 +23,4 @@ test: utils.o test.c rsa.o
 	rm -rf test.o utest
 
 clean:
-	rm -rf *.o ../server_app ./server
+	rm -rf *.o ./server
