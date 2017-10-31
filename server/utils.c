@@ -379,13 +379,15 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
   hip[0] = '\0';
   hport[0] = '\0';
   root[0] = '\0';
-  struct option opts[] = {
-    {"ip-address", required_argument, NULL, 'a'},
-    {"port",       optional_argument, NULL, 'p'},
-    {"root",       optional_argument, NULL, 'r'}
+  static struct option opts[] = {
+    {"address",    required_argument,   NULL,   'a'},
+    {"port",       required_argument,   NULL,   'p'},
+    {"root",       optional_argument,   NULL,   'r'},
+    {0, 0, 0, 0}
   };
+
   int opt;
-  while ((opt = getopt_long(argc, argv, "a:p:r:", opts, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "a:p::r::", opts, NULL)) != -1) {
     switch (opt) {
       case 'a':
         strcpy(hip, optarg);
