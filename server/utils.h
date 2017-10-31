@@ -60,7 +60,6 @@
 #define MULT_COMMAND "mult"
 #define ENCR_COMMAND "encr"
 
-
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
 
@@ -102,7 +101,7 @@
 #define RES_MULTIT_ON          "200 Switch to multi-thread mode.\r\n"
 #define RES_MULTIT_OFF         "200 Switch to single-thread mode.\r\n"
 
-#define RES_ENCR_ON            "200 %s,%s\r\n"
+#define RES_ENCR_ON            "200 %s,%s,%d\r\n"
 #define RES_ENCR_OFF           "200 Encrypt off"
 
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
@@ -138,10 +137,11 @@ struct ServerState
   int thread;
   int encrypt;
   char hip[32];
-  char* pub_exp;
-  char* pub_mod;
-  char* priv_exp;
-  char* priv_mod;
+  bignum* pub_exp;
+  bignum* pub_mod;
+  bignum* priv_exp;
+  bignum* priv_mod;
+  int bytes;
   struct sockaddr_in target_addr;
 };
 
@@ -153,10 +153,10 @@ struct write_para
 };
 
 // a secured method to send message
-int send_msg(int connfd, char* message);
+int send_msg(struct ServerState* state, char* str);
 
 // a secured method to receive message
-int read_msg(int connfd, char* message);
+int read_msg(struct ServerState* state, char* message);
 
 int send_file(int des_fd, int src_fd, int offset);
 

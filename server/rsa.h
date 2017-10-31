@@ -25,6 +25,8 @@
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
+#define BLOCK_SIZE  94
+
 /**
  * Basic limb type. Note that some calculations rely on unsigned overflow wrap-around of this type.
  * As a result, only unsigned types should be used here, and the RADIX, HALFRADIX above should be
@@ -85,8 +87,10 @@ int readFile(FILE* fd, char** buffer, int bytes);
 void encode(bignum* m, bignum* e, bignum* n, bignum* result);
 void decode(bignum* c, bignum* d, bignum* n, bignum* result);
 bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus);
-int *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
-void gen_rsa_key(char** pub_exp, char** pub_mod, char** priv_exp, char** priv_mod);
+int encodeString(char* src, char** des, bignum* exp, bignum* mod);
+char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
+int decodeString(char* src, char** des, bignum* exp, bignum* mod);
+void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
 
 #endif
 

@@ -1,11 +1,17 @@
 #include "utils.h"
 
-int send_msg(int connfd, char* message)
+int send_msg(struct ServerState* state, char* str)
 {
   int p = 0;
-  int len = strlen(message);
+  int len = strlen(str);
+  char* message;
+  if (state->encrypt) {
+    encodeString(str, &message, state->priv_exp, state->priv_mod);
+  } else {
+    message = str;
+  }
   while (p < len) {
-    int n = write(connfd, message + p, len - p);
+    int n = write(state->command_fd, message + p, len - p);
     if (n < 0) {
       sprintf(error_buf, ERROR_PATT, "write", "send_msg");
       perror(error_buf);
@@ -168,13 +174,13 @@ int recv_file(int des_fd, int src_fd)
   }
 }
 
-int read_msg(int connfd, char* message)
+int read_msg(struct ServerState* state, char* message)
 {
-  int n = read(connfd, message, 8191);
+  int n = read(state->command_fd, message, 8191);
   if (n < 0) {
     sprintf(error_buf, ERROR_PATT, "read", "read_msg");
     perror(error_buf);
-    close(connfd);
+    close(state->command_fd);
     return -1;
   }
   message[n] = '\0';
@@ -289,7 +295,6 @@ int parse_command(char* message, char* content)
 
 int connect_by_mode(struct ServerState* state)
 {
-  int connfd = state->command_fd;
   if (state->trans_mode == PORT_CODE) {
     if (connect(
           state->data_fd,
@@ -298,19 +303,19 @@ int connect_by_mode(struct ServerState* state)
         ) < 0) {
       sprintf(error_buf, ERROR_PATT, "connect", "command_stor");
       perror(error_buf);
-      send_msg(connfd, RES_FAILED_CONN);
+      send_msg(state, RES_FAILED_CONN);
       return -1;
     }
   } else if (state->trans_mode == PASV_CODE){
     if ((state->data_fd = accept(state->listen_fd, NULL, NULL)) == -1) {
       sprintf(error_buf, ERROR_PATT, "accept", "command_stor");
       perror(error_buf);
-      send_msg(connfd, RES_FAILED_LSTN);
+      send_msg(state, RES_FAILED_LSTN);
       return -1;
     }
     close(state->listen_fd);
   } else {
-    send_msg(connfd, RES_WANTCONN);
+    send_msg(state, RES_WANTCONN);
     return -1;
   }
   return 0;
@@ -420,13 +425,12 @@ void strip_crlf(char* str)
 int command_user(struct ServerState* state, char* uname)
 {
   int ret = 0;
-  int connfd = state->command_fd;
   //if (strcmp(uname, USER_NAME) == 0) {
   if (1) {
-    send_msg(connfd, RES_ACCEPT_USER);
+    send_msg(state, RES_ACCEPT_USER);
     ret = 1;
   } else {
-    send_msg(connfd, RES_REJECT_USER);
+    send_msg(state, RES_REJECT_USER);
   }
 
   return ret;
@@ -434,14 +438,12 @@ int command_user(struct ServerState* state, char* uname)
 
 int command_pass(struct ServerState* state, char* pwd)
 {
-  int connfd = state->command_fd;
-
   //if (strcmp(pwd, PASSWORD) == 0) {
   if (1) {
-    send_msg(connfd, RES_ACCEPT_PASS);
+    send_msg(state, RES_ACCEPT_PASS);
     state->logged = 1;
   } else {
-    send_msg(connfd, RES_REJECT_PASS);
+    send_msg(state, RES_REJECT_PASS);
     state->logged = 0;
   }
 
@@ -450,26 +452,24 @@ int command_pass(struct ServerState* state, char* pwd)
 
 int command_unknown(struct ServerState* state)
 {
-  int connfd = state->command_fd;
-  send_msg(connfd, RES_UNKNOWN);
+  send_msg(state, RES_UNKNOWN);
   return 0;
 }
 
 int command_port(struct ServerState* state, char* content)
 {
-  int connfd = state->command_fd;
   struct sockaddr_in* addr = &(state->target_addr);
 
   if ((state->data_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
     sprintf(error_buf, ERROR_PATT, "scoket", "aommand_port");
     perror(error_buf);
-    send_msg(connfd, RES_REJECT_PORT);
+    send_msg(state, RES_REJECT_PORT);
     return -1;
   }
 
   // check
   if (!strlen(content)) {
-    send_msg(connfd, RES_ACCEPT_PORT);
+    send_msg(state, RES_ACCEPT_PORT);
     return 1;
   }
 
@@ -483,25 +483,24 @@ int command_port(struct ServerState* state, char* content)
   if (inet_pton(AF_INET, ip, &(addr->sin_addr)) <= 0) {
     sprintf(error_buf, ERROR_PATT, "inet_pton", "command_port");
     perror(error_buf);
-    send_msg(connfd, RES_REJECT_PORT);
+    send_msg(state, RES_REJECT_PORT);
     return -1;
   }
 
-  send_msg(connfd, RES_ACCEPT_PORT);
+  send_msg(state, RES_ACCEPT_PORT);
   state->trans_mode = PORT_CODE;
   return 1;
 }
 
 int command_pasv(struct ServerState* state)
 {
-  int connfd = state->command_fd;
   char* hip = state->hip;
   struct sockaddr_in* addr = &(state->target_addr);
 
   if ((state->listen_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
     sprintf(error_buf, ERROR_PATT, "scoket", "command_pasv");
     perror(error_buf);
-    send_msg(connfd, RES_REJECT_PASV);
+    send_msg(state, RES_REJECT_PASV);
     return -1;
   }
 
@@ -516,14 +515,14 @@ int command_pasv(struct ServerState* state)
   if (bind(state->listen_fd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
     sprintf(error_buf, ERROR_PATT, "bind", "command_pasv");
     perror(error_buf);
-    send_msg(connfd, RES_REJECT_PASV);
+    send_msg(state, RES_REJECT_PASV);
     return -1;
   }
 
   if (listen(state->listen_fd, 10) == -1) {
     sprintf(error_buf, ERROR_PATT, "listen", "command_pasv");
    perror(error_buf);
-    send_msg(connfd, RES_REJECT_PASV);
+    send_msg(state, RES_REJECT_PASV);
     return -1;
   }
 
@@ -532,7 +531,7 @@ int command_pasv(struct ServerState* state)
   str_replace(hip_cp, '.', ',');
   char buffer[32] = "";
   sprintf(buffer, RES_ACCEPT_PASV, hip_cp, p1, p2);
-  send_msg(connfd, buffer);
+  send_msg(state, buffer);
   state->trans_mode = PASV_CODE;
 
   return 1;
@@ -540,24 +539,21 @@ int command_pasv(struct ServerState* state)
 
 int command_quit(struct ServerState* state)
 {
-  int connfd = state->command_fd;
-  send_msg(connfd, RES_CLOSE);
-  close(connfd);
+  send_msg(state, RES_CLOSE);
+  close(state->command_fd);
   return 0;
 }
 
 int command_retr(struct ServerState* state, char* path)
 {
-  int connfd = state->command_fd;
-
   if (access(path, 4) != 0) { // 4: readable
-    send_msg(connfd, RES_TRANS_NOFILE);
+    send_msg(state, RES_TRANS_NOFILE);
     return -1;
   }
 
   int src_fd;
   if ((src_fd = open(path, O_RDONLY)) == 0) {
-    send_msg(connfd, RES_TRANS_NREAD);
+    send_msg(state, RES_TRANS_NREAD);
     return -1;
   }
 
@@ -565,7 +561,7 @@ int command_retr(struct ServerState* state, char* path)
     return -1;
   }
 
-  send_msg(connfd, RES_TRANS_START);
+  send_msg(state, RES_TRANS_START);
 
   int flag;
   struct timespec t1, t2;
@@ -581,9 +577,9 @@ int command_retr(struct ServerState* state, char* path)
   printf("finish sending, time cost %dms\n", delta);
 
   if (flag == 0) {
-    send_msg(connfd, RES_TRANS_SUCCESS);
+    send_msg(state, RES_TRANS_SUCCESS);
   } else {
-    send_msg(connfd, RES_TRANS_FAIL);
+    send_msg(state, RES_TRANS_FAIL);
   }
 
   close_connections(state);
@@ -593,11 +589,9 @@ int command_retr(struct ServerState* state, char* path)
 
 int command_stor(struct ServerState* state, char* path)
 {
-  int connfd = state->command_fd;
-
   int des_fd;
   if ((des_fd = open(path, O_WRONLY | O_CREAT)) == 0) {
-    send_msg(connfd, RES_TRANS_NCREATE);
+    send_msg(state, RES_TRANS_NCREATE);
     return -1;
   }
 
@@ -605,11 +599,11 @@ int command_stor(struct ServerState* state, char* path)
     return -1;
   }
 
-  send_msg(connfd, RES_TRANS_START);
+  send_msg(state, RES_TRANS_START);
   if (recv_file(des_fd, state->data_fd) == 0) {
-    send_msg(connfd, RES_TRANS_SUCCESS);
+    send_msg(state, RES_TRANS_SUCCESS);
   } else {
-    send_msg(connfd, RES_TRANS_FAIL);
+    send_msg(state, RES_TRANS_FAIL);
   }
 
   close_connections(state);
@@ -621,12 +615,12 @@ int command_type(struct ServerState* state, char* content)
   str_lower(content);
   if (content[0] == 'i' || content[0] == 'l') {
     state->binary_flag = 1;
-    send_msg(state->command_fd, RES_ACCEPT_TYPE);
+    send_msg(state, RES_ACCEPT_TYPE);
   } else if (content[0] == 'a') {
     state->binary_flag = 0;
-    send_msg(state->command_fd, RES_ACCEPT_TYPE);
+    send_msg(state, RES_ACCEPT_TYPE);
   } else {
-    send_msg(state->command_fd, RES_ERROR_ARGV);
+    send_msg(state, RES_ERROR_ARGV);
   }
   return 0;
 }
@@ -637,10 +631,8 @@ int command_list(struct ServerState* state, char* path, int is_long)
     path = "./";
   }
   
-  int connfd = state->command_fd;
-
   if (access(path, 0) != 0) { // 0: existence
-    send_msg(connfd, RES_TRANS_NOFILE);
+    send_msg(state, RES_TRANS_NOFILE);
     return -1;
   }
 
@@ -656,28 +648,28 @@ int command_list(struct ServerState* state, char* path, int is_long)
   if (!fp) {
     sprintf(error_buf, ERROR_PATT, "popen", "command_list");
     perror(error_buf);
-    send_msg(connfd, RES_TRANS_NREAD);
+    send_msg(state, RES_TRANS_NREAD);
   }
 
   if (connect_by_mode(state) != 0) {
     return -1;
   }
 
-  send_msg(connfd, RES_TRANS_START);
+  send_msg(state, RES_TRANS_START);
 
-  char buf[128];
-  // if (is_long) {
-  //   fgets(buf, sizeof(buf), fp); // remove the first line
-  // }
+  char buf[256];
+  if (is_long) {
+    fgets(buf, sizeof(buf), fp); // remove the first line
+  }
   while (fgets(buf, sizeof(buf), fp)) {
     strip_crlf(buf);
     strcat(buf, "\r\n");
-    printf("%s", buf);
-    send_msg(state->data_fd, buf);
+    // printf("%s", buf);
+    write(state->data_fd, buf, strlen(buf));
   }
 
   printf("Command list finish transfer.\n");
-  send_msg(connfd, RES_TRANS_SUCCESS);
+  send_msg(state, RES_TRANS_SUCCESS);
   pclose(fp);
   close_connections(state);
   return 0;
@@ -687,33 +679,31 @@ int command_mkd(struct ServerState* state, char* path)
 {
   int flag = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   if (flag == 0) {
-    send_msg(state->command_fd, RES_ACCEPT_MKD);
+    send_msg(state, RES_ACCEPT_MKD);
   } else {
-    send_msg(state->command_fd, RES_REJECT_MKD);
+    send_msg(state, RES_REJECT_MKD);
   }
   return flag;
 }
 
 int command_cwd(struct ServerState* state, char* path)
 {
-  int connfd = state->command_fd;
   if (chdir(path) == -1) {
-    send_msg(connfd, RES_REJECT_CWD); 
+    send_msg(state, RES_REJECT_CWD); 
   } else {
-    send_msg(connfd, RES_ACCEPT_CWD);
+    send_msg(state, RES_ACCEPT_CWD);
   }
   return 0;
 }
 
 int command_rmd(struct ServerState* state, char* path)
 {
-  int connfd = state->command_fd;
   char cmd[32] = "rm -rf ";
   strcat(cmd, path);
   if (system(cmd) == 0) {
-    send_msg(connfd, RES_ACCEPT_RMD);
+    send_msg(state, RES_ACCEPT_RMD);
   } else {
-    send_msg(connfd, RES_REJECT_RMD);
+    send_msg(state, RES_REJECT_RMD);
   }
   return 0;
 }
@@ -722,10 +712,10 @@ int command_rest(struct ServerState* state, char* content)
 {
   state->offset = atoi(content);
   if (state->offset > 0) {
-    send_msg(state->command_fd, RES_ACCEPT_REST);
+    send_msg(state, RES_ACCEPT_REST);
   } else {
     state->offset = 0;
-    send_msg(state->command_fd, RES_REJECT_REST);
+    send_msg(state, RES_REJECT_REST);
   }
   return 0;
 }
@@ -734,10 +724,10 @@ int command_mult(struct ServerState* state)
 {
   if (state->thread == 1) {
     state->thread = 2;
-    send_msg(state->command_fd, RES_MULTIT_ON);
+    send_msg(state, RES_MULTIT_ON);
   } else {
     state->thread = 1;
-    send_msg(state->command_fd, RES_MULTIT_OFF);
+    send_msg(state, RES_MULTIT_OFF);
   }
   return 0;
 }
@@ -745,12 +735,12 @@ int command_mult(struct ServerState* state)
 int command_encr(struct ServerState* state)
 {
   if (state->encrypt == 1) {
-    state->thread = 0;
-    send_msg(state->command_fd, RES_ENCR_OFF);
-    free(state->pub_exp);
-    free(state->pub_mod);
-    free(state->priv_exp);
-    free(state->priv_mod);
+    state->encrypt = 0;
+    send_msg(state, RES_ENCR_OFF);
+    bignum_deinit(state->pub_exp);
+    bignum_deinit(state->pub_mod);
+    bignum_deinit(state->priv_exp);
+    bignum_deinit(state->priv_mod);
     state->pub_exp = NULL;
     state->pub_mod = NULL;
     state->priv_exp = NULL;
@@ -758,10 +748,13 @@ int command_encr(struct ServerState* state)
   } else {
     state->encrypt = 1;
     gen_rsa_key(&(state->pub_exp), &(state->pub_mod),
-      &(state->priv_exp), &(state->priv_mod));
+      &(state->priv_exp), &(state->priv_mod), &(state->bytes));
+
+    char* pub_exp = bignum_tostring(state->pub_exp);
+    char* pub_mod = bignum_tostring(state->pub_mod);
     char buf[1024];
-    sprintf(buf, RES_ENCR_ON, state->pub_exp, state->pub_mod);
-    send_msg(state->command_fd, buf);
+    sprintf(buf, RES_ENCR_ON, pub_exp, pub_mod, state->bytes);
+    send_msg(state, buf);
   }
   return 0;
 }

@@ -64,10 +64,32 @@ void command_list_test()
   pclose(fp); 
 }
 
+void crypt_test()
+{
+  int bytes;
+  char* encoded;
+  char* decoded;
+  bignum* pub_exp;
+  bignum* pub_mod;
+  bignum* priv_exp;
+  bignum* priv_mod;
+  char* hello = (char*)malloc(32);
+  strcpy(hello, "Hello, world!");
+  gen_rsa_key(&pub_exp, &pub_mod, &priv_exp, &priv_mod, &bytes);
+  encodeString(hello, &encoded, priv_exp, priv_mod);
+  decodeString(encoded, &decoded, pub_exp, pub_mod);
+  
+  printf("Decoded result:\n");
+  printf("%s\n", decoded);
+
+  free(hello);
+}
+
 int main()
 {
   printf("================================================================\n");
-  command_list_test();
+  crypt_test();
+  // command_list_test();
   // split_command_test();
   // parse_addr_test();
   return 0;

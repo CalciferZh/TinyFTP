@@ -150,7 +150,6 @@ char* bignum_tostring(bignum* b) {
 	}
 	buffer[len] = '\0';
 	str_inverse(buffer);
-	// printf("%s\n", buffer);
 	bignum_deinit(copy);
 	bignum_deinit(remainder);
 	return buffer;
@@ -795,13 +794,42 @@ bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignu
 	return encoded;
 }
 
+int encodeString(char* src, char** des, bignum* exp, bignum* mod) {
+	bignum* encoded;
+
+	int len = strlen(src);
+	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
+	int sz = pck_num * BLOCK_SIZE;
+	char* cpy = (char*)malloc(sz);
+	strcpy(cpy, src);
+
+	// zero padding to a multiple of bytes
+	int i;
+	for (i = len; i < sz; ++i) {
+		cpy[i] = 0;
+	}
+	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
+
+	// here we only support to encrypt the first 94 bytes
+	// because I don't have time to finish them all
+	// so even "encoded" is a pointer to an array
+	// we only translate the first element
+	*des = bignum_tostring(encoded);
+
+	bignum_deinit(encoded);
+	free(cpy);
+	// the return value is how many packet we got
+	// return pck_num;
+	return 1;
+}
+
 /**
  * Decode the cryptogram of given length, using the private key (exponent, modulus)
  * Each encrypted packet should represent "bytes" characters as per encodeMessage.
  * The returned message will be of size len * bytes.
  */
-int *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus) {
-	int *decoded = malloc(len * bytes * sizeof(int));
+char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus) {
+	char *decoded = (char*)malloc(len * bytes * sizeof(char));
 	int i, j;
 	bignum *x = bignum_init(), *remainder = bignum_init();
 	bignum *num128 = bignum_init();
@@ -810,46 +838,80 @@ int *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, big
 		decode(&cryptogram[i], exponent, modulus, x);
 		for(j = 0; j < bytes; j++) {
 			bignum_idivider(x, num128, remainder);
-			if(remainder->length == 0) decoded[i*bytes + j] = (char)0;
+			if(remainder->length == 0) decoded[i*bytes + j] = '\0';
 			else decoded[i*bytes + j] = (char)(remainder->data[0]);
 		}
 	}
 	return decoded;
 }
 
-void gen_rsa_key(char** pub_exp, char** pub_mod, char** priv_exp, char** priv_mod) {
+int decodeString(char* src, char** des, bignum* exp, bignum* mod) {
+	bignum* data = bignum_init();
+	bignum_fromstring(data, src);
+
+	// similarly we decode the first block only
+	*des = decodeMessage(1, BLOCK_SIZE, data, exp, mod);
+
+	bignum_deinit(data);
+	return 0;
+}
+
+void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {
 	printf("Generating RSA key...\n");
 	bignum *p = bignum_init(), *q = bignum_init(), *n = bignum_init();
 	bignum *phi = bignum_init(), *e = bignum_init(), *d = bignum_init();
 	bignum *temp1 = bignum_init(), *temp2 = bignum_init();
+	bignum *bbytes = bignum_init(), *shift = bignum_init();
+
+	*pub_exp = bignum_init();
+	*pub_mod = bignum_init();
+	*priv_exp = bignum_init();
+	*priv_mod = bignum_init();
 	
 	randPrime(FACTOR_DIGITS, p);
-	printf("Got first prime factor\n");
+	// printf("Got first prime factor\n");
 	
 	randPrime(FACTOR_DIGITS, q);
-	printf("Got second prime factor\n");
+	// printf("Got second prime factor\n");
 	
 	bignum_multiply(n, p, q);
-	printf("Got modulus\n");
+	// printf("Got modulus\n");
 	
 	bignum_subtract(temp1, p, &NUMS[1]);
 	bignum_subtract(temp2, q, &NUMS[1]);
 	bignum_multiply(phi, temp1, temp2); /* phi = (p - 1) * (q - 1) */
-	printf("Got totient\n");
+	// printf("Got totient\n");
 	
 	randExponent(phi, EXPONENT_MAX, e);
-	printf("Chose public exponent\n");
-	printf("Got public key\n");
-	*pub_exp = bignum_tostring(e);
-	*pub_mod = bignum_tostring(n);
+	// printf("Chose public exponent\n");
+	// printf("Got public key\n");
+	bignum_copy(e, *pub_exp);
+	bignum_copy(n, *pub_mod);
 	
 	bignum_inverse(e, phi, d);
 
-	printf("Got private key\n");
-	*priv_exp = bignum_tostring(d);
-	*priv_mod = bignum_tostring(n);
+	// printf("Got private key\n");
+	bignum_copy(d, *priv_exp);
+	bignum_copy(n, *priv_mod);
 
-	printf("pub_exp:%s\npub_mod:%s\n", bignum_tostring(e), bignum_tostring(n));
+	*bytes = -1;
+	bignum_fromint(shift, 1 << 7);
+	bignum_fromint(bbytes, 1);
+	while(bignum_less(bbytes, n)) {
+		bignum_imultiply(bbytes, shift);
+		(*bytes)++;
+	}
+
+	bignum_deinit(p);
+	bignum_deinit(q);
+	bignum_deinit(n);
+	bignum_deinit(phi);
+	bignum_deinit(e);
+	bignum_deinit(d);
+	bignum_deinit(bbytes);
+	bignum_deinit(shift);
+	bignum_deinit(temp1);
+	bignum_deinit(temp2);
 }
 
 /**
