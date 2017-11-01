@@ -4,6 +4,7 @@ import os
 import random
 import time
 import ctypes
+import getpass
 
 class Client(object):
   """ftp client"""
@@ -161,7 +162,7 @@ class Client(object):
       uname = input('username: ')
       code, res = self.xchg('USER ' + uname)
       if code == 331: # ask for password
-        pwd = input('password: ')
+        pwd = getpass.getpass('password: ')
         code, res = self.xchg('PASS ' + pwd)
         if code // 100 == 2: # login success
           print('login successful as %s' % uname)
