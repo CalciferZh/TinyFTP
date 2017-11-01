@@ -158,6 +158,7 @@ int send_file_mt(int des_fd, int src_fd, int offset)
 
 int recv_file(int des_fd, int src_fd)
 {
+  printf("receiving file...\n");
   int len;
   char buf[DATA_BUF_SIZE];
 
@@ -169,9 +170,12 @@ int recv_file(int des_fd, int src_fd)
     }
   }
 
+  printf("finishing...\n");
   if (len == 0) {
-    return 1;
+    printf("OK\n");
+    return 0;
   } else {
+    printf("Error: len = %d\n", len);
     sprintf(error_buf, ERROR_PATT, "read", "recv_file");
     perror(error_buf);
     return -1;
@@ -309,7 +313,7 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
   static struct option opts[] = {
     {"address",    required_argument,   NULL,   'a'},
     {"port",       required_argument,   NULL,   'p'},
-    {"root",       optional_argument,   NULL,   'r'},
+    {"root",       required_argument,   NULL,   'r'},
     {0, 0, 0, 0}
   };
 
@@ -345,6 +349,10 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
 
   if (strlen(root) == 0) {
     strcpy(root, "/tmp");
+  }
+
+  if (strlen(hip) == 0) {
+    strcpy(hip, "127.0.0.1");
   }
 
   return 0;

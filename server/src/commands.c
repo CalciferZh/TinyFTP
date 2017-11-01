@@ -256,12 +256,13 @@ int command_stor(struct ServerState* state, char* path)
   }
 
   send_msg(state, RES_TRANS_START);
+  printf("start receiving...");
   if (recv_file(des_fd, state->data_fd) == 0) {
     send_msg(state, RES_TRANS_SUCCESS);
   } else {
     send_msg(state, RES_TRANS_FAIL);
   }
-
+  printf("finish receiving...");
   close_connections(state);
   return 0;
 }

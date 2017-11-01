@@ -51,7 +51,7 @@
 #define RES_REJECT_USER        "503 Unknown user.\r\n"
 
 #define RES_WANTPASS           "500 Command PASS is expected.\r\n"
-#define RES_ACCEPT_PASS        "220 Password accepted.\r\n"
+#define RES_ACCEPT_PASS        "230 Password accepted.\r\n"
 #define RES_REJECT_PASS        "503 Wrong password.\r\n"
 
 #define RES_ACCEPT_PORT        "200 PORT command success.\r\n"
@@ -97,7 +97,7 @@
 
 #define RES_ACCEPT_TYPE        "200 Type set to I.\r\n"
 
-#define RES_CLOSE              "421 Bye.\r\n"
+#define RES_CLOSE              "221 Bye.\r\n"
 
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"
