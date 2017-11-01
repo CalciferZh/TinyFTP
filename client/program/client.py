@@ -26,6 +26,7 @@ class Client(object):
     self.bts = None
     self.uname = None
     self.pwd = None
+    self.thread_num = 1
 
   def decode(self, msg):
     ret = self.rsalib.decodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
@@ -334,6 +335,40 @@ class Client(object):
       self.bts = int(self.bts)
       code, res = self.recv()
       print(res.strip())
+
+  def command_thread(self, arg):
+    if len(arg) == 0:
+      arg = 4 if self.thread_num == 1 else 1
+    else:
+      arg = int(arg[0]) if int(arg[0]) > 0 else 0
+    if self.thread_num != 1:
+      self.thread_num = arg
+      print('switched to %d thread(s)' % arg)
+      return
+    else:
+      self.thread_num = arg
+    code, res = self.xchg('REST 128')
+    if code // 100 == 2 or code // 100 == 3:
+      print('switched to multi-thread mode using %d threads' % self.thread_num)
+    else:
+      print('the server doesn\'t support multi-thread, back to single')
+      self.thread_num = 1
+
+  def command_size(self, arg):
+    code, res = self.xchg('SIZE ' + arg[0])
+    print(res)
+
+  def command_ext(self, arg):
+    code, res = self.xchg(' '.join(arg))
+    print(res)
+
+  def command_multi_recv(self, arg):
+    # if self.thread_num == 1:
+      # print('use "thread" command to specify thread number first')
+      # return
+    # for i in range(self.thread_num):
+    pass
+
 
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
