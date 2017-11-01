@@ -5,6 +5,15 @@ import random
 import time
 import ctypes
 import getpass
+import threading
+
+# used for multi-thread receiving
+class DataBlock(object):
+
+  def __init__(self, idx):
+    self.idx = idx
+    self.data = bytes()
+    
 
 class Client(object):
   """ftp client"""
@@ -24,8 +33,8 @@ class Client(object):
     self.pub_exp = None
     self.pub_mod = None
     self.bts = None
-    self.uname = None
-    self.pwd = None
+    self.uname = ''
+    self.pwd = ''
     self.thread_num = 1
 
   def decode(self, msg):
@@ -64,30 +73,34 @@ class Client(object):
 
     return ip, port
 
-  def send(self, msg):
+  def send(self, msg, cmdsk=None):
+    if not cmdsk:
+      cmdsk = self.sock
     msg += '\r\n';
     if self.encrypt:
       msg = self.encode(msg)
-    self.sock.send(bytes(msg, encoding='ascii'))
+    cmdsk.send(bytes(msg, encoding='ascii'))
 
-  def recv(self):
-    res = self.sock.recv(self.buf_size).decode('ascii').strip()
+  def recv(self, cmdsk=None):
+    if not cmdsk:
+      cmdsk = self.sock
+    res = cmdsk.recv(self.buf_size).decode('ascii').strip()
     if self.encrypt:
       res = self.decode(res)
     code = int(res.split()[0])
     return code, res
 
-  def xchg(self, msg):
-    """exchange message: send server the msg and return response"""
-    # try:
-    self.send(msg)
-    code, res = self.recv()
-    # except Exception as e:
-    #   print('Error in Client.xchg' + str(e))
+  def xchg(self, msg, cmdsk=None):
+    if not cmdsk:
+      cmdsk = self.sock
+    self.send(msg, cmdsk)
+    code, res = self.recv(cmdsk)
     return code, res
 
-  def pasv(self):
-    code, res = self.xchg('PASV')
+  def pasv(self, cmdsk=None):
+    if not cmdsk:
+      cmdsk = self.cmdsk
+    code, res = self.xchg('PASV', cmdsk)
     print(res.strip())
     ip = None
     port = None
@@ -95,12 +108,14 @@ class Client(object):
       ip, port = self.extract_addr(res)
     return ip, port
 
-  def port(self):
+  def port(self, cmdsk=None):
+    if not cmdsk:
+      cmdsk = self.cmdsk
     lport = random.randint(20000, 65535)
     p1 = lport // 256
     p2 = lport % 256
     ip = self.lip.replace('.', ',')
-    code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2))
+    code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2), cmdsk)
     print(res.strip())
     if code // 100 == 2:
       lstn_sock = socket.socket()
@@ -110,34 +125,84 @@ class Client(object):
     else:
       return None
 
-  def data_connect(self, msg):
+  def data_connect(self, msg, verbose=True, cmdsk=None):
     data_sock = None
+    if not cmdsk:
+      cmdsk = self.sock
     if self.mode == 'pasv':
-      ip, port = self.pasv()
-      self.send(msg)
+      ip, port = self.pasv(cmdsk)
+      self.send(msg, cmdsk)
       if ip and port:
         data_sock = socket.socket()
         data_sock.connect((ip, port))
-        code, res = self.recv()
-        print(res.strip())
+        code, res = self.recv(cmdsk)
+        if verbose:
+          print(res.strip())
         if (code != 150):
           data_sock.close()
           data_sock = None;
       else:
         print('Error in Client.data_connect: no ip or port')
     elif self.mode == 'port':
-      lstn_sock = self.port()
-      self.send(msg)
+      lstn_sock = self.port(cmdsk)
+      self.send(msg, cmdsk)
       if lstn_sock:
         data_sock, _ = lstn_sock.accept()
         lstn_sock.close()
-        code, res = self.recv()
-        print(res.strip())
+        code, res = self.recv(cmdsk)
+        if verbose:
+          print(res.strip())
       else:
         print('Error in Client.data_connect: no lstn_sock')
     else:
       print('Error in Client.data_connect: illegal mode')
     return data_sock
+
+  def login(self):
+    if not self.uname:
+      print('auto login failed: no username')
+      return None
+    cmdsk = socket.socket()
+    print('connecting %s %d' % (self.hip, self.hport))
+    cmdsk.connect((self.hip, self.hport))
+    code, res = self.recv(cmdsk)
+    if code == 220: # success connect
+      code, res = self.xchg('USER ' + self.uname, cmdsk)
+      if code == 331: # ask for password
+        code, res = self.xchg('PASS ' + self.pwd, cmdsk)
+        if code // 100 == 2: # login success
+          code, res = self.xchg('TYPE I', cmdsk)
+        else:
+          print('login failed')
+      else:
+        print('login failed')
+    else:
+      print('connection failed due to server')
+    return cmdsk
+
+  def recv_thread(self, path, offset, blocksize, dblock):
+    idx = dblock.idx
+    print('Thread %d connecting...' % idx)
+    cmdsk = self.login()
+    if not cmdsk:
+      return
+    code, res = self.xchg('REST %d' % offset, cmdsk)
+    if code // 100 != 2 and code // 100 != 3:
+      dblock.data = None
+      return
+    print('Thread %d requesting...' % idx)
+    datask = self.data_connect('RETR ' + path, verbose=False, cmdsk=cmdsk)
+    if not datask:
+      dblock.data = None
+      return
+    remained = blocksize
+    dblock.data = bytes()
+    print('Thread %d reading...' % idx)
+    while len(dblock.data) < blocksize:
+      dblock.data += datask.recv(remained)
+    print('Thread %d exiting...' % idx)
+    datask.close()
+    cmdsk.close()
 
   def command_open(self, arg):
     self.hip = arg[0]
@@ -180,6 +245,7 @@ class Client(object):
       print('connection fail due to server')
 
   def command_recv(self, arg):
+    elapse = time.time()
     arg = ''.join(arg)
     data_sock = self.data_connect('RETR ' + arg)
     if data_sock:
@@ -191,7 +257,6 @@ class Client(object):
       else:
         f = open(arg, 'wb')
 
-      t = time.time()
       data = data_sock.recv(self.buf_size)
       total = len(data)
       while data:
@@ -201,13 +266,61 @@ class Client(object):
       f.close()
       data_sock.close()
       code, res = self.recv()
-      t = time.time() - t
       print(res.strip())
-      print('%dkb in %f seconds, %fkb/s in avg' % (total, t, total / t / 1e3))
+
+      elapse = time.time() - elapse
+      print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
 
+  def command_multirecv(self, arg):
+    elapse = time.time()
+
+    if self.thread_num == 1:
+      print('use "thread" command to specify thread number first')
+      return
+    code, res = self.command_size(arg)
+    _, direct = self.command_pwd(None)
+    path = os.path.join(direct, arg[0])
+    if code // 100 != 2:
+      print('cannot start multi-thread receiving')
+      print('server response: %s' % res)
+      return
+    size = int(res.split()[1])
+    interval = size // self.thread_num
+    threads = []
+    blocks = []
+    for i in range(self.thread_num):
+      blocks.append(DataBlock(i))
+      offset = i * interval
+      blocksize = interval if (offset + interval <= size) else (size - offset)
+      threads.append(\
+        threading.Thread(target=self.recv_thread,
+                         args=(path, offset, blocksize, blocks[i])))
+
+    for t in threads:
+      t.start()
+
+    for t in threads:
+      t.join()
+
+    blocks = sorted(blocks, key=lambda x: x.idx)
+    total = bytes()
+    for b in blocks:
+      if b.data:
+        total += b.data
+      else:
+        print('Error: data block %d is broken' % b.idx)
+        return
+
+    with open(path, 'wb') as f:
+      f.write(total)
+
+    elapse = time.time() - elapse
+    print('%dkb in %f seconds, %fkb/s in avg' % (size, elapse, size/elapse/1e3))
+
   def command_send(self, arg):
+    elapse = time.time()
     arg = ''.join(arg)
     data_sock = self.data_connect('STOR ' + arg)
     if data_sock:
@@ -216,11 +329,10 @@ class Client(object):
         data_sock.send(f.read())
       data_sock.close()
       code, res = self.recv()
-      t = time.time() - t
       print(res.strip())
       total = os.path.getsize(arg)
-      print('%dkb in %f seconds, %fkb/s in avg' % \
-        (total, t, total / (t+1e-4) / 1e3))
+      elapse = time.time() - elapse
+      print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
     else:
       print('Error in Client.command_send: no data_sock')
 
@@ -357,18 +469,16 @@ class Client(object):
   def command_size(self, arg):
     code, res = self.xchg('SIZE ' + arg[0])
     print(res)
+    return code, res
 
   def command_ext(self, arg):
     code, res = self.xchg(' '.join(arg))
     print(res)
 
-  def command_multi_recv(self, arg):
-    # if self.thread_num == 1:
-      # print('use "thread" command to specify thread number first')
-      # return
-    # for i in range(self.thread_num):
-    pass
-
+  def command_pwd(self, arg):
+    code, res = self.xchg('PWD')
+    print(res)
+    return code, res
 
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
