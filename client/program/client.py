@@ -192,14 +192,18 @@ class Client(object):
     print('Thread %d connecting...' % idx)
     cmdsk = self.login()
     if not cmdsk:
+      print('Thread %d login failed...')
       return
     code, res = self.xchg('REST %d' % offset, cmdsk)
     if code // 100 != 2 and code // 100 != 3:
+      print('Thread %d set REST failed...' % idx)
+      print('server response: %s' % res)
       dblock.data = None
       return
     print('Thread %d requesting...' % idx)
     datask = self.data_connect('RETR ' + path, verbose=False, cmdsk=cmdsk)
     if not datask:
+      print('Thread %d RETR failed...' % idx)
       dblock.data = None
       return
     remained = blocksize

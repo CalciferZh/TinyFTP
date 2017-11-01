@@ -381,7 +381,7 @@ int command_rmd(struct ServerState* state, char* path)
 int command_rest(struct ServerState* state, char* content)
 {
   state->offset = atoi(content);
-  if (state->offset > 0) {
+  if (state->offset >= 0) {
     send_msg(state, RES_ACCEPT_REST);
   } else {
     state->offset = 0;
