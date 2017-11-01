@@ -197,6 +197,10 @@ int serve(int connfd)
         command_encr(&state);
         break;
 
+      case SIZE_CODE:
+        command_size(&state, content);
+        break;
+
       default:
         command_unknown(&state);
         break;

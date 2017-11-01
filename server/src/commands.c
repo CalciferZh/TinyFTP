@@ -68,6 +68,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, ENCR_COMMAND) == 0) {
     ret = ENCR_CODE;
   }
+  else if (strcmp(command, SIZE_COMMAND) == 0) {
+    ret = SIZE_CODE;
+  }
   return ret;
 }
 
@@ -417,5 +420,23 @@ int command_encr(struct ServerState* state)
     state->encrypt = 1;
     send_msg(state, "200 Hello, this is an encrypted message.");
   }
+  return 0;
+}
+
+int command_size(struct ServerState* state, char* path)
+{
+  int src_fd;
+  if ((src_fd = open(path, O_RDONLY)) == 0) {
+    send_msg(state, RES_REJECT_SIZE);
+    return -1;
+  }
+
+  struct stat stat_buf;
+  fstat(src_fd, &stat_buf);
+  close(src_fd);
+
+  char buf[128];
+  sprintf(buf, RES_ACCEPT_SIZE, (int)stat_buf.st_size);
+  send_msg(state, buf);
   return 0;
 }

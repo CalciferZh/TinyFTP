@@ -22,6 +22,7 @@
 #define REST_CODE 16
 #define MULT_CODE 17 // multi-thread
 #define ENCR_CODE 18 // encrypt with rsa
+#define SIZE_CODE 19
 
 #define USER_COMMAND "user"
 #define PASS_COMMAND "pass"
@@ -42,6 +43,7 @@
 #define REST_COMMAND "rest"
 #define MULT_COMMAND "mult"
 #define ENCR_COMMAND "encr"
+#define SIZE_COMMAND "size"
 
 #define RES_READY              "220 Anonymous FTP server ready.\r\n"
 #define RES_UNKNOWN            "500 Unknown command.\r\n"
@@ -87,6 +89,9 @@
 #define RES_ENCR_ON            "200 %s,%s,%d\r\n"
 #define RES_ENCR_OFF           "200 Encrypt off"
 
+#define RES_ACCEPT_SIZE        "213 %d\r\n"
+#define RES_REJECT_SIZE        "550 Command SIZE rejected.\r\n"
+
 #define RES_TRANS_NCREATE      "551 Cannot create file.\r\n"
 
 #define RES_WANTCONN           "425 Require PASV or PORT.\r\n"
@@ -119,5 +124,6 @@ int command_rmd(struct ServerState* state, char* path);
 int command_rest(struct ServerState* state, char* content);
 int command_mult(struct ServerState* state);
 int command_encr(struct ServerState* state);
+int command_size(struct ServerState* state, char* path);
 
 #endif
