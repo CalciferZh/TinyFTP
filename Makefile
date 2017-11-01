@@ -1,12 +1,12 @@
 all: ./server/server ./client/client
 
 ./server/server:
-	cd ./server/ && make all
+	cd ./server/src/ && make all
 
 ./client/client:
 	cd ./client/ && make all
 
 clean:
-	cd ./server/ && make clean
+	cd ./server/src && make clean
 	cd ./client/ && make clean
 

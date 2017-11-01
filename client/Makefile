@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall
-LIB = ../server/
+LIB = ../server/src/
 
 all: librsa.so
 
