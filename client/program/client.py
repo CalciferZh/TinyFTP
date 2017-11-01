@@ -14,7 +14,6 @@ class DataBlock(object):
     self.idx = idx
     self.data = bytes()
     
-
 class Client(object):
   """ftp client"""
   def __init__(self):
@@ -36,6 +35,7 @@ class Client(object):
     self.uname = ''
     self.pwd = ''
     self.thread_num = 1
+    self.running = True
 
   def decode(self, msg):
     ret = self.rsalib.decodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
@@ -72,6 +72,16 @@ class Client(object):
     port = int(p1 * 256 + p2)
 
     return ip, port
+
+  def extract_rl(self, arg):
+    remote = arg[0]
+    local = None
+    if len(arg) == 2:
+      local = arg[1]
+    else:
+      local = arg[0]
+    print('remote: %s local: %s' % (remote, local))
+    return remote, local
 
   def send(self, msg, cmdsk=None):
     if not cmdsk:
@@ -159,9 +169,6 @@ class Client(object):
     return data_sock
 
   def login(self):
-    if not self.uname:
-      print('auto login failed: no username')
-      return None
     cmdsk = socket.socket()
     print('connecting %s %d' % (self.hip, self.hport))
     cmdsk.connect((self.hip, self.hport))
@@ -245,17 +252,17 @@ class Client(object):
       print('connection fail due to server')
 
   def command_recv(self, arg):
+    remote, local = self.extract_rl(arg)
     elapse = time.time()
-    arg = ''.join(arg)
-    data_sock = self.data_connect('RETR ' + arg)
+    data_sock = self.data_connect('RETR ' + remote)
     if data_sock:
       f = None
       if self.append:
-        f = open(arg, 'ab')
+        f = open(local, 'ab')
         self.append = False
         print('resuming transfer...')
       else:
-        f = open(arg, 'wb')
+        f = open(local, 'wb')
 
       data = data_sock.recv(self.buf_size)
       total = len(data)
@@ -267,21 +274,25 @@ class Client(object):
       data_sock.close()
       code, res = self.recv()
       print(res.strip())
-
       elapse = time.time() - elapse
       print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
 
   def command_multirecv(self, arg):
+    remote, local = self.extract_rl(arg)
     elapse = time.time()
-
     if self.thread_num == 1:
       print('use "thread" command to specify thread number first')
       return
-    code, res = self.command_size(arg)
+    code, res = self.command_size([remote])
+
+    # got the things between ""
     _, direct = self.command_pwd(None)
-    path = os.path.join(direct, arg[0])
+    if '"' in direct:
+      direct = direct.split('"')[1]
+    # direct = "." + direct
+    remote = os.path.join(direct, remote)
     if code // 100 != 2:
       print('cannot start multi-thread receiving')
       print('server response: %s' % res)
@@ -296,7 +307,7 @@ class Client(object):
       blocksize = interval if (offset + interval <= size) else (size - offset)
       threads.append(\
         threading.Thread(target=self.recv_thread,
-                         args=(path, offset, blocksize, blocks[i])))
+                         args=(remote, offset, blocksize, blocks[i])))
 
     for t in threads:
       t.start()
@@ -313,24 +324,24 @@ class Client(object):
         print('Error: data block %d is broken' % b.idx)
         return
 
-    with open(path, 'wb') as f:
+    with open(local, 'wb') as f:
       f.write(total)
 
     elapse = time.time() - elapse
     print('%dkb in %f seconds, %fkb/s in avg' % (size, elapse, size/elapse/1e3))
 
   def command_send(self, arg):
+    remote, local = self.extract_rl(arg)
     elapse = time.time()
-    arg = ''.join(arg)
-    data_sock = self.data_connect('STOR ' + arg)
+    data_sock = self.data_connect('STOR ' + remote)
     if data_sock:
       t = time.time()
-      with open(arg, 'rb') as f:
+      with open(local, 'rb') as f:
         data_sock.send(f.read())
       data_sock.close()
       code, res = self.recv()
       print(res.strip())
-      total = os.path.getsize(arg)
+      total = os.path.getsize(local)
       elapse = time.time() - elapse
       print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
     else:
@@ -371,8 +382,8 @@ class Client(object):
   def command_bye(self, arg):
     if self.logged:
       self.command_close('')
-    print('good luck')
-    return True
+    # print('good luck')
+    self.running = False
 
   def command_nlist(self, arg):
     arg = ''.join(arg)
@@ -483,16 +494,14 @@ class Client(object):
   def run(self):
     self.lip = socket.gethostbyname(socket.gethostname())
     print('ftp client start, ip addr %s' % self.lip)
-    flag = None
-    while not flag:
+    while self.running:
       cmd = input('ftp > ').split()
       arg = cmd[1:]
       cmd = cmd[0]
       try:
-        flag = getattr(self, "command_%s" % cmd)(arg)
+        getattr(self, "command_%s" % cmd)(arg)
       except Exception as e:
         print(str(e))
-        print('invalid command')
 
 
     

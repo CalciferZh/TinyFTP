@@ -71,6 +71,9 @@ int parse_command(char* message, char* content)
   else if (strcmp(command, SIZE_COMMAND) == 0) {
     ret = SIZE_CODE;
   }
+  else if (strcmp(command, PWD_COMMAND) == 0) {
+    ret = PWD_CODE;
+  }
   return ret;
 }
 
@@ -156,19 +159,26 @@ int command_pasv(struct ServerState* state)
     return -1;
   }
 
-  int p1, p2;
-  int port = get_random_port(&p1, &p2);
+
 
   memset(addr, 0, sizeof(*addr));
   addr->sin_family = AF_INET;
-  addr->sin_port = htons(port);
   addr->sin_addr.s_addr = htonl(INADDR_ANY);
 
-  if (bind(state->listen_fd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
-    sprintf(error_buf, ERROR_PATT, "bind", "command_pasv");
-    perror(error_buf);
-    send_msg(state, RES_REJECT_PASV);
-    return -1;
+  int p1, p2;
+  int port = get_random_port(&p1, &p2);
+  addr->sin_port = htons(port);
+
+  int max_try = 16;
+  while (bind(state->listen_fd, (struct sockaddr*)addr, sizeof(*addr)) == -1) {
+    if (--max_try < 0) {
+      sprintf(error_buf, ERROR_PATT, "bind", "command_pasv");
+      perror(error_buf);
+      send_msg(state, RES_REJECT_PASV);
+      return -1;
+    }
+    port = get_random_port(&p1, &p2);
+    addr->sin_port = htons(port);
   }
 
   if (listen(state->listen_fd, 10) == -1) {
@@ -438,5 +448,14 @@ int command_size(struct ServerState* state, char* path)
   char buf[128];
   sprintf(buf, RES_ACCEPT_SIZE, (int)stat_buf.st_size);
   send_msg(state, buf);
+  return 0;
+}
+
+int command_pwd(struct ServerState* state)
+{
+  char buf1[1024], buf2[1024];
+  getcwd(buf1, 1024);
+  sprintf(buf2, RES_ACCPET_PWD, buf1);
+  send_msg(state, buf2);
   return 0;
 }

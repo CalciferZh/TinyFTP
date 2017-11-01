@@ -17,11 +17,12 @@
 
 char hip[32] = "";
 int hport;
+int listenfd;
 
-int serve(int connfd);
+int serve(int connfd, int seed);
 
 int main(int argc, char** argv) {
-	int listenfd, connfd;
+	int connfd;
 	struct sockaddr_in addr;
 
   // parse arguments
@@ -66,6 +67,7 @@ int main(int argc, char** argv) {
   printf("working directory %s\n", root_dir);
 
   // loop
+  unsigned seed = 9608; // some lucky number
 	while (1) {
 		if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
       sprintf(error_buf, ERROR_PATT, "accept", "main");
@@ -75,7 +77,7 @@ int main(int argc, char** argv) {
 			if (fork() == 0) {
 				printf("Connection accepted.\n");
 			} else {
-				serve(connfd);
+				serve(connfd, seed++);
 				return 0;
 			}
 		}
@@ -85,12 +87,11 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-int serve(int connfd)
+int serve(int connfd, int seed)
 {
+  srand(seed);
+  close(listenfd);
   struct ServerState state;
-
-  srand(time(NULL));
-
   state.command_fd = connfd;
   state.data_fd = -1;
   state.listen_fd = -1;
@@ -199,6 +200,10 @@ int serve(int connfd)
 
       case SIZE_CODE:
         command_size(&state, content);
+        break;
+
+      case PWD_CODE:
+        command_pwd(&state);
         break;
 
       default:
