@@ -24,6 +24,8 @@ class Client(object):
     self.pub_exp = None
     self.pub_mod = None
     self.bts = None
+    self.uname = None
+    self.pwd = None
 
   def decode(self, msg):
     ret = self.rsalib.decodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
@@ -134,11 +136,6 @@ class Client(object):
         print('Error in Client.data_connect: no lstn_sock')
     else:
       print('Error in Client.data_connect: illegal mode')
-
-    # code, res = self.xchg(msg)
-    # code = 150
-
-    
     return data_sock
 
   def command_open(self, arg):
@@ -159,19 +156,18 @@ class Client(object):
     # print('Server system: %s' % res)
 
     if code == 220: # success connect
-      uname = input('username: ')
-      code, res = self.xchg('USER ' + uname)
+      self.uname = input('username: ')
+      code, res = self.xchg('USER ' + self.uname)
       if code == 331: # ask for password
-        pwd = getpass.getpass('password: ')
-        code, res = self.xchg('PASS ' + pwd)
+        self.pwd = getpass.getpass('password: ')
+        code, res = self.xchg('PASS ' + self.pwd)
         if code // 100 == 2: # login success
-          print('login successful as %s' % uname)
+          print('login successful as %s' % self.uname)
           self.logged = True
           code, res = self.xchg('TYPE I')
           if code == 200: # use binay
             print('using binary.')
           else:
-            # but we'll still use binary =)
             print('server refused using binary.')
         else:
           print(res.strip())
