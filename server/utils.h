@@ -54,39 +54,22 @@ struct write_para
   int size;
 };
 
-// a secured method to send message
-int send_msg(struct ServerState* state, char* str);
-
-// a secured method to receive message
-int read_msg(struct ServerState* state, char* message);
-
-int send_file(int des_fd, int src_fd, int offset);
-
-void write_thread(void* arg);
-
-int send_file_mt(int des_fd, int src_fd, int offset);
-
-void str_lower(char* str);
-
-void str_replace(char* str, char src, char des);
-
-void split_command(char* message, char* command, char* content);
-
-int connect_by_mode(struct ServerState* state);
-
-// parse ip address & port
-int parse_addr(char* content, char* ip_buf);
-
-int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
-
-void strip_crlf(char* uname);
-
-int get_random_port(int* p1, int* p2);
-
 char error_buf[128];
 
+int send_msg(struct ServerState* state, char* str);
+int read_msg(struct ServerState* state, char* message);
+int send_file(int des_fd, int src_fd, int offset);
+int send_file_mt(int des_fd, int src_fd, int offset);
+int connect_by_mode(struct ServerState* state);
+int parse_addr(char* content, char* ip_buf);
+int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
+int get_random_port(int* p1, int* p2);
 int recv_file(int des_fd, int src_fd);
-
 int close_connections(struct ServerState* state);
+void write_thread(void* arg);
+void str_lower(char* str);
+void str_replace(char* str, char src, char des);
+void split_command(char* message, char* command, char* content);
+void strip_crlf(char* uname);
 
 #endif
