@@ -170,7 +170,7 @@ int command_pasv(struct ServerState* state)
 
   if (listen(state->listen_fd, 10) == -1) {
     sprintf(error_buf, ERROR_PATT, "listen", "command_pasv");
-   perror(error_buf);
+    perror(error_buf);
     send_msg(state, RES_REJECT_PASV);
     return -1;
   }
