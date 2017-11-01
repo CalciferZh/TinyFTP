@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "utils.h"
+#include "commands.h"
 
 char hip[32] = "";
 int hport;

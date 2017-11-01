@@ -3,11 +3,14 @@ CFLAGS = -Wall
 
 all: server
 
-server: server.o utils.o rsa.o
-	$(CC) $(CFLAGS) server.o utils.o rsa.o -o server -lpthread
+server: server.o utils.o rsa.o commands.o
+	$(CC) $(CFLAGS) server.o utils.o rsa.o commands.o -o server -lpthread
 
 server.o: server.c
 	$(CC) $(CFLAGS) -c server.c -o server.o
+
+commands.o: commands.h commands.c
+	$(CC) $(CFLAGS) -c commands.c -o commands.o
 
 utils.o: utils.h utils.c
 	$(CC) $(CFLAGS) -c utils.c -o utils.o
