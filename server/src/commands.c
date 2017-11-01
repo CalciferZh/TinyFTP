@@ -1,12 +1,12 @@
 #include "commands.h"
 
 
-int parse_command(char* message, char* content)
+int parse_command(char* message, char* arg)
 {
   char command[16]; // actually all commands are 4 bytes or less
-  split_command(message, command, content);
+  split_command(message, command, arg);
   strip_crlf(command);
-  strip_crlf(content);
+  strip_crlf(arg);
   str_lower(command);
 
   int ret = -1;
@@ -111,7 +111,7 @@ int command_unknown(struct ServerState* state)
   return 0;
 }
 
-int command_port(struct ServerState* state, char* content)
+int command_port(struct ServerState* state, char* arg)
 {
   struct sockaddr_in* addr = &(state->target_addr);
 
@@ -123,13 +123,13 @@ int command_port(struct ServerState* state, char* content)
   }
 
   // check
-  if (!strlen(content)) {
+  if (!strlen(arg)) {
     send_msg(state, RES_ACCEPT_PORT);
     return 1;
   }
 
   char ip[64];
-  int port = parse_addr(content, ip);
+  int port = parse_addr(arg, ip);
   memset(addr, 0, sizeof(*addr));
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port);
@@ -280,13 +280,13 @@ int command_stor(struct ServerState* state, char* path)
   return 0;
 }
 
-int command_type(struct ServerState* state, char* content)
+int command_type(struct ServerState* state, char* arg)
 {
-  str_lower(content);
-  if (content[0] == 'i' || content[0] == 'l') {
+  str_lower(arg);
+  if (arg[0] == 'i' || arg[0] == 'l') {
     state->binary_flag = 1;
     send_msg(state, RES_ACCEPT_TYPE);
-  } else if (content[0] == 'a') {
+  } else if (arg[0] == 'a') {
     state->binary_flag = 0;
     send_msg(state, RES_ACCEPT_TYPE);
   } else {
@@ -378,9 +378,9 @@ int command_rmd(struct ServerState* state, char* path)
   return 0;
 }
 
-int command_rest(struct ServerState* state, char* content)
+int command_rest(struct ServerState* state, char* arg)
 {
-  state->offset = atoi(content);
+  state->offset = atoi(arg);
   if (state->offset >= 0) {
     send_msg(state, RES_ACCEPT_REST);
   } else {

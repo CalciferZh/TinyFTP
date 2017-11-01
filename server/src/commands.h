@@ -111,21 +111,21 @@
 #define USER_NAME              "anonymous"
 #define PASSWORD               "some_password"
 
-int parse_command(char* message, char* content);
+int parse_command(char* message, char* arg);
 int command_user(struct ServerState* state, char* uname);
 int command_pass(struct ServerState* state, char* pwd);
 int command_unknown(struct ServerState* state);
-int command_port(struct ServerState* state, char* content);
+int command_port(struct ServerState* state, char* arg);
 int command_pasv(struct ServerState* state);
 int command_quit(struct ServerState* state);
 int command_retr(struct ServerState* state, char* path);
 int command_stor(struct ServerState* state, char* path);
-int command_type(struct ServerState* state, char* content);
+int command_type(struct ServerState* state, char* arg);
 int command_list(struct ServerState* state, char* path, int is_long);
 int command_mkd(struct ServerState* state, char* path);
 int command_cwd(struct ServerState* state, char* path);
 int command_rmd(struct ServerState* state, char* path);
-int command_rest(struct ServerState* state, char* content);
+int command_rest(struct ServerState* state, char* arg);
 int command_mult(struct ServerState* state);
 int command_encr(struct ServerState* state);
 int command_size(struct ServerState* state, char* path);

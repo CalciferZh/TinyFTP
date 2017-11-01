@@ -111,14 +111,14 @@ int serve(int connfd, int seed)
   int c_code = 0;
   int len = 0;
   char message[4096];
-  char content[4096];
+  char arg[4096];
 
   send_msg(&state, RES_READY);
 
   // loop routine
   while ((len = read_msg(&state, message))) {
     printf("%s", message);
-    c_code = parse_command(message, content);
+    c_code = parse_command(message, arg);
 
     if (!state.logged && c_code != USER_CODE && c_code != PASS_CODE) {
       send_msg(&state, RES_WANTUSER);
@@ -127,11 +127,11 @@ int serve(int connfd, int seed)
 
     switch (c_code) {
       case USER_CODE:
-        command_user(&state, content);
+        command_user(&state, arg);
         break;
 
       case PASS_CODE:
-        command_pass(&state, content);
+        command_pass(&state, arg);
         break;
 
       case XPWD_CODE:
@@ -144,7 +144,7 @@ int serve(int connfd, int seed)
         return 0;
 
       case PORT_CODE:
-        command_port(&state, content);
+        command_port(&state, arg);
         break;
 
       case PASV_CODE:
@@ -152,42 +152,42 @@ int serve(int connfd, int seed)
         break;
 
       case RETR_CODE:
-        command_retr(&state, content);
+        command_retr(&state, arg);
         break;
 
       case STOR_CODE:
-        command_stor(&state, content);
+        command_stor(&state, arg);
 
       case SYST_CODE:
         send_msg(&state, RES_SYSTEM);
         break;
 
       case TYPE_CODE:
-        command_type(&state, content);
+        command_type(&state, arg);
         break;
 
       case LIST_CODE:
-        command_list(&state, content, 1);
+        command_list(&state, arg, 1);
         break;
 
       case NLST_CODE:
-        command_list(&state, content, 0);
+        command_list(&state, arg, 0);
         break;
 
       case MKD_CODE:
-        command_mkd(&state, content);
+        command_mkd(&state, arg);
         break;
 
       case CWD_CODE:
-        command_cwd(&state, content);
+        command_cwd(&state, arg);
         break;
 
       case RMD_CODE:
-        command_rmd(&state, content);
+        command_rmd(&state, arg);
         break;
 
       case REST_CODE:
-        command_rest(&state, content);
+        command_rest(&state, arg);
         break;
 
       case MULT_CODE:
@@ -199,7 +199,7 @@ int serve(int connfd, int seed)
         break;
 
       case SIZE_CODE:
-        command_size(&state, content);
+        command_size(&state, arg);
         break;
 
       case PWD_CODE:

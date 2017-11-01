@@ -61,7 +61,7 @@ int read_msg(struct ServerState* state, char* message);
 int send_file(int des_fd, int src_fd, int offset);
 int send_file_mt(int des_fd, int src_fd, int offset);
 int connect_by_mode(struct ServerState* state);
-int parse_addr(char* content, char* ip_buf);
+int parse_addr(char* arg, char* ip_buf);
 int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
 int get_random_port(int* p1, int* p2);
 int recv_file(int des_fd, int src_fd);
@@ -69,7 +69,7 @@ int close_connections(struct ServerState* state);
 void write_thread(void* arg);
 void str_lower(char* str);
 void str_replace(char* str, char src, char des);
-void split_command(char* message, char* command, char* content);
+void split_command(char* message, char* command, char* arg);
 void strip_crlf(char* uname);
 
 #endif

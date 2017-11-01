@@ -229,17 +229,17 @@ void str_replace(char* str, char src, char des)
   }
 }
 
-void split_command(char* message, char* command, char* content)
+void split_command(char* message, char* command, char* arg)
 {
   char* blank = strchr(message, ' ');
 
   if (blank != NULL) {
     strncpy(command, message, (int)(blank - message));
     command[(int)(blank - message)] = '\0';
-    strcpy(content, blank + 1);
+    strcpy(arg, blank + 1);
   } else {
     strcpy(command, message);
-    content[0] = '\0';
+    arg[0] = '\0';
   }
 }
 
@@ -276,18 +276,18 @@ int close_connections(struct ServerState* state)
   return 0;
 }
 
-int parse_addr(char* content, char* ip)
+int parse_addr(char* arg, char* ip)
 {
-  str_replace(content, ',', '.');
+  str_replace(arg, ',', '.');
 
   int i = 0;
-  char* dot = content;
+  char* dot = arg;
   for (i = 0; i < 4; ++i) {
     dot = strchr(++dot, '.');
   }
 
   // retrieve ip address
-  strncpy(ip, content, (int)(dot - content));
+  strncpy(ip, arg, (int)(dot - arg));
   strcat(ip, "\0");
 
   // retrieve port 1
