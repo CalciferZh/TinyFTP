@@ -505,7 +505,10 @@ class Client(object):
       try:
         getattr(self, "command_%s" % cmd)(arg)
       except Exception as e:
-        print(str(e))
+        if type(e) == AttributeError:
+          print('invalid command')
+        else:
+          print(str(e))
 
 
     
