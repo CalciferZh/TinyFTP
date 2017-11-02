@@ -97,7 +97,7 @@ class Client(object):
     res = cmdsk.recv(self.buf_size).decode('ascii').strip()
     if self.encrypt:
       res = self.decode(res)
-    code = int(res.split()[0])
+    code = int(res[0]) # only first number of the code is concerned
     return code, res
 
   def xchg(self, msg, cmdsk=None):
@@ -114,7 +114,7 @@ class Client(object):
     print(res.strip())
     ip = None
     port = None
-    if code == 227:
+    if code == 2:
       ip, port = self.extract_addr(res)
     return ip, port
 
@@ -127,7 +127,7 @@ class Client(object):
     ip = self.lip.replace('.', ',')
     code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2), cmdsk)
     print(res.strip())
-    if code // 100 == 2:
+    if code == 2:
       lstn_sock = socket.socket()
       lstn_sock.bind(('', lport))
       lstn_sock.listen(10)
@@ -148,7 +148,7 @@ class Client(object):
         code, res = self.recv(cmdsk)
         if verbose:
           print(res.strip())
-        if (code != 150):
+        if code != 1:
           data_sock.close()
           data_sock = None;
       else:
@@ -173,11 +173,11 @@ class Client(object):
     print('connecting %s %d' % (self.hip, self.hport))
     cmdsk.connect((self.hip, self.hport))
     code, res = self.recv(cmdsk)
-    if code == 220: # success connect
+    if code == 2: # success connect
       code, res = self.xchg('USER ' + self.uname, cmdsk)
-      if code == 331: # ask for password
+      if code == 3: # ask for password
         code, res = self.xchg('PASS ' + self.pwd, cmdsk)
-        if code // 100 == 2: # login success
+        if code == 2: # login success
           code, res = self.xchg('TYPE I', cmdsk)
         else:
           print('login failed')
@@ -195,7 +195,7 @@ class Client(object):
       print('Thread %d login failed...')
       return
     code, res = self.xchg('REST %d' % offset, cmdsk)
-    if code // 100 != 2 and code // 100 != 3:
+    if code != 2 and code != 3:
       print('Thread %d set REST failed...' % idx)
       print('server response: %s' % res)
       dblock.data = None
@@ -232,17 +232,17 @@ class Client(object):
     # res = self.recv()
     # print('Server system: %s' % res)
 
-    if code == 220: # success connect
+    if code == 2: # success connect
       self.uname = input('username: ')
       code, res = self.xchg('USER ' + self.uname)
-      if code == 331: # ask for password
+      if code == 3: # ask for password
         self.pwd = getpass.getpass('password: ')
         code, res = self.xchg('PASS ' + self.pwd)
-        if code // 100 == 2: # login success
+        if code == 2: # login success
           print('login successful as %s' % self.uname)
           self.logged = True
           code, res = self.xchg('TYPE I')
-          if code == 200: # use binay
+          if code == 2: # use binay
             print('using binary.')
           else:
             print('server refused using binary.')
@@ -297,7 +297,7 @@ class Client(object):
       direct = direct.split('"')[1]
     # direct = "." + direct
     remote = os.path.join(direct, remote)
-    if code // 100 != 2:
+    if code != 2:
       print('cannot start multi-thread receiving')
       print('server response: %s' % res)
       return
@@ -428,7 +428,7 @@ class Client(object):
     try:
       offset = os.path.getsize(''.join(arg))
       code, res = self.xchg('REST %d' % offset)
-      if code // 100 == 2 or code // 100 == 3:
+      if code == 2 or code == 3:
         self.append = True
       else:
         print('server rejected resume')
@@ -475,7 +475,7 @@ class Client(object):
     else:
       self.thread_num = arg
     code, res = self.xchg('REST 128')
-    if code // 100 == 2 or code // 100 == 3:
+    if code == 2 or code == 3:
       print('switched to multi-thread mode using %d threads' % self.thread_num)
     else:
       print('the server doesn\'t support multi-thread, back to single')
@@ -510,8 +510,6 @@ class Client(object):
         else:
           print(str(e))
 
-
-    
 if __name__ == '__main__':
   client = Client()
   client.run()
