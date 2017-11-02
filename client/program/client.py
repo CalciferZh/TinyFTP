@@ -97,6 +97,7 @@ class Client(object):
     res = cmdsk.recv(self.buf_size).decode('ascii').strip()
     if self.encrypt:
       res = self.decode(res)
+    res = res.strip()
     code = int(res[0]) # only first number of the code is concerned
     return code, res
 
@@ -111,7 +112,7 @@ class Client(object):
     if not cmdsk:
       cmdsk = self.cmdsk
     code, res = self.xchg('PASV', cmdsk)
-    print(res.strip())
+    print(res)
     ip = None
     port = None
     if code == 2:
@@ -126,7 +127,7 @@ class Client(object):
     p2 = lport % 256
     ip = self.lip.replace('.', ',')
     code, res = self.xchg('PORT %s,%d,%d' % (ip, p1, p2), cmdsk)
-    print(res.strip())
+    print(res)
     if code == 2:
       lstn_sock = socket.socket()
       lstn_sock.bind(('', lport))
@@ -147,7 +148,7 @@ class Client(object):
         data_sock.connect((ip, port))
         code, res = self.recv(cmdsk)
         if verbose:
-          print(res.strip())
+          print(res)
         if code != 1:
           data_sock.close()
           data_sock = None;
@@ -161,7 +162,7 @@ class Client(object):
         lstn_sock.close()
         code, res = self.recv(cmdsk)
         if verbose:
-          print(res.strip())
+          print(res)
       else:
         print('Error in Client.data_connect: no lstn_sock')
     else:
@@ -226,7 +227,7 @@ class Client(object):
     self.sock = socket.socket()
     self.sock.connect((self.hip, self.hport))
     code, res = self.recv()
-    print(res.strip())
+    print(res)
 
     # self.send('SYST')
     # res = self.recv()
@@ -247,10 +248,10 @@ class Client(object):
           else:
             print('server refused using binary.')
         else:
-          print(res.strip())
+          print(res)
           print('login failed')
       else:
-        print(res.strip())
+        print(res)
         print('login failed')
     else:
       print('connection fail due to server')
@@ -277,7 +278,7 @@ class Client(object):
       f.close()
       data_sock.close()
       code, res = self.recv()
-      print(res.strip())
+      print(res)
       elapse = time.time() - elapse
       print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
     else:
@@ -344,7 +345,7 @@ class Client(object):
         data_sock.send(f.read())
       data_sock.close()
       code, res = self.recv()
-      print(res.strip())
+      print(res)
       total = os.path.getsize(local)
       elapse = time.time() - elapse
       print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
@@ -366,7 +367,7 @@ class Client(object):
         packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
-      print(res.strip())
+      print(res)
       data_sock.close()
     else:
       print('Error in Client.command_ls: no data_sock')
@@ -379,7 +380,7 @@ class Client(object):
 
   def command_close(self, arg):
     code, res = self.xchg('QUIT')
-    print(res.strip())
+    print(res)
     self.sock.close()
     self.__init__()
 
@@ -404,7 +405,7 @@ class Client(object):
         packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
-      print(res.strip())
+      print(res)
       data_sock.close()
     else:
       print('Error in Client.command_ls: no data_sock')
@@ -412,17 +413,17 @@ class Client(object):
   def command_mkdir(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('MKD ' + arg)
-    print(res.strip())
+    print(res)
 
   def command_rm(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('RMD ' + arg)
-    print(res.strip())
+    print(res)
 
   def command_cd(self, arg):
     arg = ''.join(arg)
     code, res = self.xchg('CWD ' + arg)
-    print(res.strip())
+    print(res)
 
   def command_resume(self, arg):
     try:
@@ -447,21 +448,21 @@ class Client(object):
 
   def command_mult(self, arg):
     code, res = self.xchg('MULT')
-    print(res.strip())
+    print(res)
 
   def command_encry(self, arg):
     if self.encrypt:
       self.send('ENCR')
       self.encrypt = False
       code, res = self.recv()
-      print(res.strip())
+      print(res)
     else:
       code, res = self.xchg('ENCR')
       self.encrypt = True
       self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')
       self.bts = int(self.bts)
       code, res = self.recv()
-      print(res.strip())
+      print(res)
 
   def command_thread(self, arg):
     if len(arg) == 0:
