@@ -910,6 +910,7 @@ char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char
 	get_encode_info(len, bytes, &pck_num);
 	int res_len = pck_num * BLOCK_LENGTH * sizeof(word);
 	memcpy(buf, res, res_len);
+	free(res);
 
 	// printf("============================== CDEBUG ===========================\n");
 	// printf("src: %s\n", src);
@@ -1034,7 +1035,7 @@ char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 	return decoded;
 }
 
-char* decodeBytesChar(char* src, int len, int bytes, char* exp_, char* mod_) {
+char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
 	bignum* exp = bignum_init();
 	bignum_fromstring(exp, exp_);
 
@@ -1042,6 +1043,10 @@ char* decodeBytesChar(char* src, int len, int bytes, char* exp_, char* mod_) {
 	bignum_fromstring(mod, mod_);
 
 	char* res = decodeBytes(src, len, bytes, exp, mod);
+	int pck_num = len / (sizeof(word) / sizeof(char)) / BLOCK_LENGTH;
+	int decoded_len = pck_num * bytes;
+	memcpy(buf, res, decoded_len);
+	free(res);
 
 	// printf("============================== CDEBUG ===========================\n");
 	// printf("len: %d\n", len);

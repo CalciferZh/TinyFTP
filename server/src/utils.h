@@ -66,6 +66,7 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
 int get_random_port(int* p1, int* p2);
 int recv_file(int des_fd, int src_fd);
 int close_connections(struct ServerState* state);
+int get_len_after_encoding(int len, int bytes);
 void write_thread(void* arg);
 void str_lower(char* str);
 void str_replace(char* str, char src, char des);

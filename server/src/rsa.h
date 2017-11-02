@@ -57,7 +57,7 @@ char* encodeStringChar(char* src, char* exp, char* mod);
 char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
 char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
 char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp, char* mod);
-char* decodeBytesChar(char* src, int len, int bytes, char* exp, char* mod);
+char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp, char* mod);
 
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
 

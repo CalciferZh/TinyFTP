@@ -3,12 +3,10 @@
 int send_msg(struct ServerState* state, char* str)
 {
   int len = strlen(str);
-  int pck_num;
   char* message;
   if (state->encrypt) {
     message = encodeBytes(str, len, state->bytes, state->priv_exp, state->priv_mod);
-    get_encode_info(len, state->bytes, &pck_num);
-    len = pck_num * BLOCK_LENGTH * (sizeof(int) / sizeof(char));
+    len = get_len_after_encoding(len, state->bytes);
   } else {
     message = str;
   }
@@ -41,6 +39,7 @@ int send_file(int des_fd, int src_fd, int offset)
 
   int to_read, fin_read;
   char buf[DATA_BUF_SIZE];
+  char* middle;
 
   int remain = stat_buf.st_size - offset;
   printf("Start file transfer...\n");
@@ -54,6 +53,12 @@ int send_file(int des_fd, int src_fd, int offset)
       perror(error_buf);
       return -1;
     }
+    // if (state->encrypt) {
+    //   middle = encodeBytes(buf, fin_read, state->bytes, state->priv_exp, state->priv_mod);
+    //   fin_read = get_len_after_encoding(fin_read, state->bytes);
+    //   memcpy(buf, middle, fin_read);
+    //   free(middle);
+    // }
     if (write(des_fd, buf, fin_read) == -1) {
       sprintf(error_buf, ERROR_PATT, "write", "send_file");
       perror(error_buf);
@@ -165,21 +170,26 @@ int recv_file(int des_fd, int src_fd)
   printf("receiving file...\n");
   int len;
   char buf[DATA_BUF_SIZE];
+  char* middle;
 
   while ((len = read(src_fd, buf, DATA_BUF_SIZE)) > 0) {
+    // if (state->encrypt) {
+    //   middle = decodeBytes(buf, len, state->bytes, state->priv_exp, state->priv_mod);
+    //   memcpy(buf, middle, strlen(middle));
+    //   free(middle);
+    //   len = strlen(buf) - 1; // drop the last '\0' added by decode
+    // }
     if (write(des_fd, buf, len) == -1) {
       sprintf(error_buf, ERROR_PATT, "write", "recv_file");
       perror(error_buf);
       return -1;
     }
   }
-
-  printf("finishing...\n");
   if (len == 0) {
-    printf("OK\n");
+    // printf("OK\n");
     return 0;
   } else {
-    printf("Error: len = %d\n", len);
+    // printf("Error: len = %d\n", len);
     sprintf(error_buf, ERROR_PATT, "read", "recv_file");
     perror(error_buf);
     return -1;
@@ -385,4 +395,10 @@ int get_random_port(int* p1, int* p2)
   return port;
 }
 
+int get_len_after_encoding(int len, int bytes)
+{
+  int pck_num;
+  get_encode_info(len, bytes, &pck_num);
+  return pck_num * BLOCK_LENGTH * (sizeof(int) / sizeof(char));
+}
 

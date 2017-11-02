@@ -48,14 +48,17 @@ class Client(object):
     return data
 
   def decode(self, msg):
-    ret = self.rsalib.decodeBytesChar(
+    decoded_length = math.ceil((len(msg) / self.blocksize)) * self.bts
+    buf = (ctypes.c_byte * decoded_length)()
+    self.rsalib.decodeBytesChar(
       msg,
       ctypes.c_int(len(msg)),
       ctypes.c_int(self.bts),
+      buf,
       bytes(self.pub_exp, encoding='ascii'),
       bytes(self.pub_mod, encoding='ascii')
     )
-    ret = ret.decode('ascii')
+    ret = bytearray(buf)
     return ret
 
   def encode(self, msg):
@@ -131,8 +134,8 @@ class Client(object):
         read += len(res)
       res = self.decode(res)
     else:
-      res = cmdsk.recv(self.buf_size).decode('ascii')
-    res = res.strip()
+      res = cmdsk.recv(self.buf_size)
+    res = res.decode('ascii').strip()
     code = int(res[0]) # only first number of the code is concerned
     return code, res
 
@@ -293,6 +296,10 @@ class Client(object):
 
   def command_recv(self, arg):
     remote, local = self.extract_rl(arg)
+    code, res = self.xchg('SIZE ' + remote)
+    file_size = None
+    if code == 2:
+      file_size = int(res.split()[1])
     elapse = time.time()
     data_sock = self.data_connect('RETR ' + remote)
     if data_sock:
@@ -305,11 +312,13 @@ class Client(object):
         f = open(local, 'wb')
 
       data = data_sock.recv(self.buf_size)
-      total = len(data)
       while data:
+        if self.encrypt:
+          pass
         f.write(data)
-        data = data_sock.recv(self.buf_size)
         total += len(data)
+
+        data = data_sock.recv(self.buf_size)
       f.close()
       data_sock.close()
       code, res = self.recv()
