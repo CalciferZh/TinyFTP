@@ -927,7 +927,6 @@ char* decodeStringChar(char* src, char* exp_, char* mod_) {
 }
 
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {
-	printf("Generating RSA key...\n");
 	bignum *p = bignum_init(), *q = bignum_init(), *n = bignum_init();
 	bignum *phi = bignum_init(), *e = bignum_init(), *d = bignum_init();
 	bignum *temp1 = bignum_init(), *temp2 = bignum_init();

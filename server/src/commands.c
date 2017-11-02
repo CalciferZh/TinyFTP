@@ -416,8 +416,10 @@ int command_encr(struct ServerState* state)
     state->priv_exp = NULL;
     state->priv_mod = NULL;
   } else {
+    printf("Generating RSA key...\n");
     gen_rsa_key(&(state->pub_exp), &(state->pub_mod),
       &(state->priv_exp), &(state->priv_mod), &(state->bytes));
+    printf("finished rsa-key generation\n");
 
     char* pub_exp = bignum_tostring(state->pub_exp);
     char* pub_mod = bignum_tostring(state->pub_mod);
