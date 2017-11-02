@@ -450,7 +450,7 @@ class Client(object):
     code, res = self.xchg('MULT')
     print(res)
 
-  def command_encry(self, arg):
+  def command_crypt(self, arg):
     if self.encrypt:
       self.send('ENCR')
       self.encrypt = False
