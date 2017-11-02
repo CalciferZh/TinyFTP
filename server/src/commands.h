@@ -89,7 +89,7 @@
 #define RES_MULTIT_OFF         "200 Switch to single-thread mode.\r\n"
 
 #define RES_ENCR_ON            "200 %s,%s,%d\r\n"
-#define RES_ENCR_OFF           "200 Encrypt off"
+#define RES_ENCR_OFF           "200 Encrypt off\r\n"
 
 #define RES_ACCEPT_SIZE        "213 %d\r\n"
 #define RES_REJECT_SIZE        "550 Command SIZE rejected.\r\n"

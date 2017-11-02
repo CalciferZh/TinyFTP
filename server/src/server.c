@@ -15,6 +15,8 @@
 #include "utils.h"
 #include "commands.h"
 
+#define COMMAND_BUF_SIZE 4096
+
 char hip[32] = "";
 int hport;
 int listenfd;
@@ -110,8 +112,8 @@ int serve(int connfd, int seed)
 
   int c_code = 0;
   int len = 0;
-  char message[4096];
-  char arg[4096];
+  char message[COMMAND_BUF_SIZE];
+  char arg[COMMAND_BUF_SIZE];
 
   send_msg(&state, RES_READY);
 
@@ -210,6 +212,8 @@ int serve(int connfd, int seed)
         command_unknown(&state);
         break;
     }
+
+    memset(message, 0, COMMAND_BUF_SIZE);
   }
 
   close(state.command_fd);

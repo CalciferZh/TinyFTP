@@ -28,3 +28,4 @@ test: utils.o test.c rsa.o
 
 clean:
 	rm -rf *.o ../server
+

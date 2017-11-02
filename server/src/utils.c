@@ -7,10 +7,12 @@ int send_msg(struct ServerState* state, char* str)
   char* message;
   if (state->encrypt) {
     message = encodeBytes(str, len, state->bytes, state->priv_exp, state->priv_mod);
-    len = get_encode_info(len, state->bytes, &pck_num);
+    get_encode_info(len, state->bytes, &pck_num);
+    len = pck_num * BLOCK_LENGTH * (sizeof(int) / sizeof(char));
   } else {
     message = str;
   }
+  printf("sending %d bytes\n", len);
   int p = 0;
   while (p < len) {
     int n = write(state->command_fd, message + p, len - p);
@@ -186,7 +188,9 @@ int recv_file(int des_fd, int src_fd)
 
 int read_msg(struct ServerState* state, char* str)
 {
-  int n = read(state->command_fd, str, DATA_BUF_SIZE);
+  int n;
+
+  n = read(state->command_fd, str, DATA_BUF_SIZE);
 
   if (n < 0) {
     sprintf(error_buf, ERROR_PATT, "read", "read_msg");

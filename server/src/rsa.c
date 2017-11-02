@@ -880,12 +880,24 @@ char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 		offset = ret + i * BLOCK_LENGTH;
 		memcpy(offset, encoded[i].data, BLOCK_LENGTH * sizeof(word));
 	}
+	printf("============================== CDEBUG ===========================\n");
+	printf("src: %s\n", src);
+	printf("string length: %d\n", len);
+	printf("length after encoding: %lu\n", BLOCK_LENGTH * pck_num * sizeof(word));
+	for (i = 0; i < pck_num; ++i) {
+		printf("block %d: first number %u, length %d\n", i, encoded[i].data[0], encoded[i].length);
+	}
+	printf("first block data:\n");
+	for (i = 0; i < encoded[0].length; ++i) {
+		printf("%u\n", encoded[0].data[i]);
+	}
+	printf("============================== CDEBUG ===========================\n");
 	free(new_src);
 	bignum_deinit(encoded);
 	return (char*)ret;
 }
 
-char* encodeBytesChar(char* src, int len, int bytes, char* exp_, char* mod_) {
+char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
 	bignum* exp = bignum_init();
 	bignum_fromstring(exp, exp_);
 
@@ -894,12 +906,18 @@ char* encodeBytesChar(char* src, int len, int bytes, char* exp_, char* mod_) {
 
 	char* res = encodeBytes(src, len, bytes, exp, mod);
 
-	printf("============================== CDEBUG ===========================\n");
-	printf("len: %d\n", len);
-	printf("bytes: %d\n", bytes);
-	printf("exp: %s\n", exp_);
-	printf("mod: %s\n", mod_);
-	printf("============================== CDEBUG ===========================\n");
+	int pck_num;
+	get_encode_info(len, bytes, &pck_num);
+	int res_len = pck_num * BLOCK_LENGTH * sizeof(word);
+	memcpy(buf, res, res_len);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("len: %d\n", len);
+	// printf("bytes: %d\n", bytes);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("============================== CDEBUG ===========================\n");
 
 	bignum_deinit(exp);
 	bignum_deinit(mod);
@@ -970,7 +988,8 @@ char* decodeStringChar(char* src, char* exp_, char* mod_) {
 char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 	word* real_data = (word*) src;
 	// printf("byte length in decoding: %d\n", len);
-	int pck_num = len / (sizeof(int) / sizeof(char)) / BLOCK_LENGTH;
+	int pck_num;
+	int last_length = get_decode_info(len, bytes, &pck_num);
 	// printf("infered packet number in decode: %d\n", pck_num);
 
 	bignum* gram = (bignum*)calloc(pck_num, sizeof(bignum));
@@ -983,7 +1002,34 @@ char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 		gram[i].data = (word*)(real_data + BLOCK_LENGTH * i);
 		// printf("%u\n", gram[i].data[0]);
 	}
+	gram[pck_num - 1].length = last_length;
+	gram[pck_num - 1].capacity = last_length;
+
 	char* decoded = decodeMessage(pck_num, bytes, gram, exp, mod);
+
+	printf("============================== CDEBUG ===========================\n");
+	printf("received len: %d\n", len);
+	printf("infered pck_num: %d\n", pck_num);
+	printf("last datagram length: %d\n", last_length);
+
+	for (i = 0; i < pck_num; ++i) {
+		printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	}
+	printf("first block data:\n");
+	for (i = 0; i < gram[0].length; ++i) {
+		printf("%u\n", gram[0].data[i]);
+	}
+
+	// printf("result: %s\n", decoded);
+	for (i = 0; i < pck_num * bytes; ++i) {
+		printf("%c", decoded[i]);
+	}
+	printf("\n");
+	for (i = 0; i < pck_num; ++i) {
+		printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	}
+	printf("============================== CDEBUG ===========================\n");
+
 	free(gram);
 	return decoded;
 }
@@ -997,12 +1043,13 @@ char* decodeBytesChar(char* src, int len, int bytes, char* exp_, char* mod_) {
 
 	char* res = decodeBytes(src, len, bytes, exp, mod);
 
-	printf("============================== CDEBUG ===========================\n");
-	printf("len: %d\n", len);
-	printf("bytes: %d\n", bytes);
-	printf("exp: %s\n", exp_);
-	printf("mod: %s\n", mod_);
-	printf("============================== CDEBUG ===========================\n");
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("len: %d\n", len);
+	// printf("bytes: %d\n", bytes);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("result: %s\n", res);
+	// printf("============================== CDEBUG ===========================\n");
 
 	bignum_deinit(exp);
 	bignum_deinit(mod);
@@ -1072,3 +1119,8 @@ int get_encode_info(int len, int bytes, int* pck_num) {
 	return (*pck_num * bytes);
 }
 
+int get_decode_info(int len, int bytes, int* pck_num) {
+	int block_length = (sizeof(int) / sizeof(char)) * BLOCK_LENGTH;
+	*pck_num = (len + block_length - 1) / block_length;
+	return (block_length - (*pck_num * block_length - len)) / (sizeof(int) / sizeof(char));
+}

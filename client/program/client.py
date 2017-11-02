@@ -7,6 +7,7 @@ import ctypes
 import getpass
 import threading
 import traceback
+import math
 
 # used for multi-thread receiving
 class DataBlock(object):
@@ -32,11 +33,19 @@ class Client(object):
     self.rsalib.encodeBytesChar.restype = ctypes.c_char_p
     self.pub_exp = None
     self.pub_mod = None
+    self.blocksize = 84 # magic number related to server
     self.bts = 94 # magic number related to server
     self.uname = ''
     self.pwd = ''
     self.thread_num = 1
     self.running = True
+
+  def zero_padding(self, data):
+    current = len(data)
+    target = int(math.ceil(current / self.blocksize) * self.blocksize)
+    pad = "\0" * (target - current)
+    data += bytes(pad, encoding='ascii')
+    return data
 
   def decode(self, msg):
     ret = self.rsalib.decodeBytesChar(
@@ -50,13 +59,18 @@ class Client(object):
     return ret
 
   def encode(self, msg):
-    ret = self.rsalib.encodeBytesChar(
+    encoded_length = math.ceil((len(msg) / self.bts)) * self.blocksize
+    buf = (ctypes.c_byte * encoded_length)()
+    self.rsalib.encodeBytesChar(
       bytes(msg, encoding='ascii'),
       ctypes.c_int(len(msg)),
       ctypes.c_int(self.bts),
+      buf,
       bytes(self.pub_exp, encoding='ascii'),
       bytes(self.pub_mod, encoding='ascii')
     )
+    ret = bytearray(buf)
+    print(len(ret))
     return ret;
 
   def extract_addr(self, string):
@@ -108,11 +122,17 @@ class Client(object):
   def recv(self, cmdsk=None):
     if not cmdsk:
       cmdsk = self.sock
-    res = cmdsk.recv(self.buf_size)
+    res = None
     if self.encrypt:
+      read = 0
+      res = cmdsk.recv(self.buf_size)
+      read += len(res)
+      while read % self.blocksize != 0:
+        res += cmdsk.recv(self.buf_size)
+        read += len(res)
       res = self.decode(res)
     else:
-      res = res.decode('ascii')
+      res = cmdsk.recv(self.buf_size).decode('ascii')
     res = res.strip()
     code = int(res[0]) # only first number of the code is concerned
     return code, res
@@ -469,7 +489,7 @@ class Client(object):
       print(res)
     else:
       code, res = self.xchg('ENCR')
-      print(res)
+      # print(res)
       if code == 2:
         self.encrypt = True
         self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')

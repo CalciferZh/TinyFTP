@@ -9,5 +9,3 @@ all: ./server/server ./client/client
 clean:
 	cd ./server/src && make clean
 	cd ./client/ && make clean
-	killall server
-
