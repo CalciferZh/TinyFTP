@@ -774,21 +774,28 @@ bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignu
 	/* Calloc works here because capacity = 0 forces a realloc by callees but we should really
 	 * bignum_init() all of these */
 	int i, j;
+	unsigned char* data = (unsigned char*) message;
 	bignum *encoded = calloc(len/bytes, sizeof(bignum));
-	bignum *num128 = bignum_init(), *num128pow = bignum_init();
+	bignum *num256 = bignum_init(), *num256pow = bignum_init();
 	bignum *x = bignum_init(), *current = bignum_init();
-	bignum_fromint(num128, 128);
-	bignum_fromint(num128pow, 1);
+	bignum_fromint(num256, 256);
+	bignum_fromint(num256pow, 1);
 	for(i = 0; i < len; i += bytes) {
 		bignum_fromint(x, 0);
-		bignum_fromint(num128pow, 1);
+		bignum_fromint(num256pow, 1);
 		/* Compute buffer[0] + buffer[1]*128 + buffer[2]*128^2 etc (base 128 representation for characters->int encoding)*/
 		for(j = 0; j < bytes; j++) {
-			bignum_fromint(current, message[i + j]);
-			bignum_imultiply(current, num128pow);
+			bignum_fromint(current, data[i + j]);
+			bignum_imultiply(current, num256pow);
 			bignum_iadd(x, current); /*x += buffer[i + j] * (1 << (7 * j)) */
-			bignum_imultiply(num128pow, num128);
+			bignum_imultiply(num256pow, num256);
 		}
+		// printf("==================== ENCODED NOT ENCRYPTED ===================\n");
+		// int k;
+		// for (k = 0; k < x[0].length; ++k) {
+		// 	printf("%u\n", x[0].data[k]);
+		// }
+
 		encode(x, exponent, modulus, &encoded[i/bytes]);
 	}
 	return encoded;
@@ -872,9 +879,22 @@ char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 	char* new_src = (char*)malloc(new_len);
 	memset(new_src, 0, new_len);
 	memcpy(new_src, src, len);
-	bignum* encoded = encodeMessage(new_len, bytes, new_src, exp, mod);
-	word* ret = (word*)calloc(BLOCK_LENGTH * pck_num, sizeof(word));
 	int i = 0;
+
+	// printf("========================== RAW =============================\n");
+	// for (i = 0; i < len; ++i) {
+	// 	printf("%d ", src[i]);
+	// }
+	// printf("\n");
+
+	bignum* encoded = encodeMessage(new_len, bytes, new_src, exp, mod);
+
+	// printf("=================== ENCODED AND ENCRYPTED ======================\n");
+	// for (i = 0; i < 21; ++i) {
+	// 	printf("%u\n", encoded[0].data[i]);
+	// }
+
+	word* ret = (word*)calloc(BLOCK_LENGTH * pck_num, sizeof(word));
 	word* offset;
 	for (i = 0; i < pck_num; ++i) {
 		offset = ret + i * BLOCK_LENGTH;
@@ -932,20 +952,27 @@ char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char
  * The returned message will be of size len * bytes.
  */
 char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus) {
-	char *decoded = (char*)malloc(len * bytes * sizeof(char));
+	unsigned char* decoded = (unsigned char*)malloc(len * bytes * sizeof(char));
 	int i, j;
 	bignum *x = bignum_init(), *remainder = bignum_init();
-	bignum *num128 = bignum_init();
-	bignum_fromint(num128, 128);
+	bignum *num256 = bignum_init();
+	bignum_fromint(num256, 256);
 	for(i = 0; i < len; i++) {
 		decode(&cryptogram[i], exponent, modulus, x);
+
+		// printf("==================== DECRYPTED NOT DECODED ===================\n");
+		// int k;
+		// for (k = 0; k < x[0].length; ++k) {
+		// 	printf("%u\n", x[0].data[k]);
+		// }
+
 		for(j = 0; j < bytes; j++) {
-			bignum_idivider(x, num128, remainder);
+			bignum_idivider(x, num256, remainder);
 			if(remainder->length == 0) decoded[i*bytes + j] = '\0';
 			else decoded[i*bytes + j] = (char)(remainder->data[0]);
 		}
 	}
-	return decoded;
+	return (char*)decoded;
 }
 
 int decodeString(char* src, char** des, bignum* exp, bignum* mod) {
@@ -1006,7 +1033,18 @@ char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 	gram[pck_num - 1].length = last_length;
 	gram[pck_num - 1].capacity = last_length;
 
+	// printf("========================== RAW RECEIVED ========================\n");
+	// for (i = 0; i < gram[0].length; ++i) {
+	// 	printf("%u\n", gram[0].data[i]);
+	// }
+
 	char* decoded = decodeMessage(pck_num, bytes, gram, exp, mod);
+
+	// printf("========================== DECODED =============================\n");
+	// for (i = 0; i < len; ++i) {
+	// 	printf("%d ", decoded[i]);
+	// }
+	// printf("\n");
 
 	// printf("============================== CDEBUG ===========================\n");
 	// printf("received len: %d\n", len);
@@ -1100,7 +1138,7 @@ void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum**
 	bignum_copy(n, *priv_mod);
 
 	*bytes = -1;
-	bignum_fromint(shift, 1 << 7);
+	bignum_fromint(shift, 1 << 8);
 	bignum_fromint(bbytes, 1);
 	while(bignum_less(bbytes, n)) {
 		bignum_imultiply(bbytes, shift);

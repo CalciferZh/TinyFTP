@@ -236,9 +236,9 @@ int command_retr(struct ServerState* state, char* path)
   struct timespec t1, t2;
   clock_gettime(CLOCK_MONOTONIC, &t1);
   if (state->thread == 1) {
-    flag = send_file(state->data_fd, src_fd, state->offset);
+    flag = send_file(state->data_fd, src_fd, state);
   } else {
-    flag = send_file_mt(state->data_fd, src_fd, state->offset);
+    flag = send_file_mt(state->data_fd, src_fd, state);
   }
   clock_gettime(CLOCK_MONOTONIC, &t2);
   int delta = (int)((t2.tv_sec - t1.tv_sec) * 1000 + (t2.tv_nsec - t1.tv_nsec) / 1000000);
@@ -270,7 +270,7 @@ int command_stor(struct ServerState* state, char* path)
 
   send_msg(state, RES_TRANS_START);
   printf("start receiving...");
-  if (recv_file(des_fd, state->data_fd) == 0) {
+  if (recv_file(des_fd, state->data_fd, state) == 0) {
     send_msg(state, RES_TRANS_SUCCESS);
   } else {
     send_msg(state, RES_TRANS_FAIL);

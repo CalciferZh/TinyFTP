@@ -107,13 +107,14 @@ void bignum_length_test()
   gen_rsa_key(&pub_exp, &pub_mod, &priv_exp, &priv_mod, &bytes);
   printf("Finished RSA key genration.\n");
 
-  bignum* encoded = encodeMessage(940, bytes, str, pub_exp, pub_mod);
-  printf("finish encoding\n");
+  // bignum* encoded = encodeMessage(940, bytes, str, pub_exp, pub_mod);
+  // printf("finish encoding\n");
 
-  int pck_num = 10;
-  for (i = 0; i < pck_num; ++i) {
-    printf("%d\n", (encoded + i)->length);
-  }
+  // int pck_num = 10;
+  // for (i = 0; i < pck_num; ++i) {
+  //   printf("%d\n", (encoded + i)->length);
+  // }
+  printf("bytes %d\n", bytes);
 }
 
 void crypt_to_bytes_test()
@@ -135,7 +136,7 @@ void crypt_to_bytes_test()
   }
   hello[len - 1] = '0';
   printf("============================ origin ============================\n");
-  printf("%s", hello);
+  printf("%s\n", hello);
   printf("================================================================\n");
 
   printf("genrating rsa key...\n");
@@ -159,8 +160,8 @@ void crypt_to_bytes_test()
 int main()
 {
   printf("================================================================\n");
-  crypt_to_bytes_test();
-  // bignum_length_test();
+  // crypt_to_bytes_test();
+  bignum_length_test();
   // crypt_test();
   // command_list_test();
   // split_command_test();

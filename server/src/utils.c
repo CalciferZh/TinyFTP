@@ -29,9 +29,10 @@ int send_msg(struct ServerState* state, char* str)
   return 0;
 }
 
-int send_file(int des_fd, int src_fd, int offset)
+int send_file(int des_fd, int src_fd, struct ServerState* state)
 {
   printf("preparing to send file in single-thread mode...\n");
+  int offset = state->offset;
 
   struct stat stat_buf;
   fstat(src_fd, &stat_buf);
@@ -46,25 +47,31 @@ int send_file(int des_fd, int src_fd, int offset)
   printf("%d bytes to send...\n", remain);
 
   while (remain > 0) {
-    to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+    if (state->encrypt) {
+      to_read = remain < DATA_BUF_SIZE_SMALL ? remain : DATA_BUF_SIZE_SMALL;
+    } else {
+      to_read = remain < DATA_BUF_SIZE ? remain : DATA_BUF_SIZE;
+    }
     fin_read = read(src_fd, buf, to_read);
+    // printf("read %d bytes...\n", fin_read);
+    remain -= fin_read;
     if (fin_read < 0) {
       sprintf(error_buf, ERROR_PATT, "read", "send_file");
       perror(error_buf);
       return -1;
     }
-    // if (state->encrypt) {
-    //   middle = encodeBytes(buf, fin_read, state->bytes, state->priv_exp, state->priv_mod);
-    //   fin_read = get_len_after_encoding(fin_read, state->bytes);
-    //   memcpy(buf, middle, fin_read);
-    //   free(middle);
-    // }
+    if (state->encrypt) {
+      middle = encodeBytes(buf, fin_read, state->bytes, state->priv_exp, state->priv_mod);
+      fin_read = get_len_after_encoding(fin_read, state->bytes);
+      memcpy(buf, middle, fin_read);
+      free(middle);
+      // printf("sending %d bytes...\n", fin_read);
+    }
     if (write(des_fd, buf, fin_read) == -1) {
       sprintf(error_buf, ERROR_PATT, "write", "send_file");
       perror(error_buf);
       return -1;
     }
-    remain -= fin_read;
   }
   printf("Transfer success!\n");
   return 0;
@@ -76,9 +83,10 @@ void write_thread(void* arg)
   write(para->des_fd, para->buf, para->size);
 }
 
-int send_file_mt(int des_fd, int src_fd, int offset)
+int send_file_mt(int des_fd, int src_fd, struct ServerState* state)
 {
   printf("preparing to send file in multi-thread mode...\n");
+  int offset = state->offset;
 
   struct stat stat_buf;
   fstat(src_fd, &stat_buf);
@@ -165,7 +173,7 @@ int send_file_mt(int des_fd, int src_fd, int offset)
   return 0;
 }
 
-int recv_file(int des_fd, int src_fd)
+int recv_file(int des_fd, int src_fd, struct ServerState* state)
 {
   printf("receiving file...\n");
   int len;
@@ -173,12 +181,12 @@ int recv_file(int des_fd, int src_fd)
   char* middle;
 
   while ((len = read(src_fd, buf, DATA_BUF_SIZE)) > 0) {
-    // if (state->encrypt) {
-    //   middle = decodeBytes(buf, len, state->bytes, state->priv_exp, state->priv_mod);
-    //   memcpy(buf, middle, strlen(middle));
-    //   free(middle);
-    //   len = strlen(buf) - 1; // drop the last '\0' added by decode
-    // }
+    if (state->encrypt) {
+      middle = decodeBytes(buf, len, state->bytes, state->priv_exp, state->priv_mod);
+      memcpy(buf, middle, strlen(middle));
+      free(middle);
+      len = strlen(buf) - 1; // drop the last '\0' added by decode
+    }
     if (write(des_fd, buf, len) == -1) {
       sprintf(error_buf, ERROR_PATT, "write", "recv_file");
       perror(error_buf);
