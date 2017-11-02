@@ -175,17 +175,18 @@ int send_file_mt(int des_fd, int src_fd, struct ServerState* state)
 
 int recv_file(int des_fd, int src_fd, struct ServerState* state)
 {
-  printf("receiving file...\n");
+  // printf("receiving file...\n");
   int len;
   char buf[DATA_BUF_SIZE];
   char* middle;
+  int decoded_len;
 
   while ((len = read(src_fd, buf, DATA_BUF_SIZE)) > 0) {
     if (state->encrypt) {
       middle = decodeBytes(buf, len, state->bytes, state->priv_exp, state->priv_mod);
-      memcpy(buf, middle, strlen(middle));
+      decoded_len = len / (sizeof(int) / sizeof(char)) / BLOCK_LENGTH * BLOCK_SIZE;
+      memcpy(buf, middle, decoded_len);
       free(middle);
-      len = strlen(buf) - 1; // drop the last '\0' added by decode
     }
     if (write(des_fd, buf, len) == -1) {
       sprintf(error_buf, ERROR_PATT, "write", "recv_file");

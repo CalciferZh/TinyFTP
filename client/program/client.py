@@ -66,7 +66,7 @@ class Client(object):
     encoded_length = math.ceil((len(msg) / self.bts)) * self.blocksize
     buf = (ctypes.c_byte * encoded_length)()
     self.rsalib.encodeBytesChar(
-      bytes(msg, encoding='ascii'),
+      msg,
       ctypes.c_int(len(msg)),
       ctypes.c_int(self.bts),
       buf,
@@ -132,7 +132,7 @@ class Client(object):
       cmdsk = self.sock
     msg = msg.strip() + '\r\n'
     if self.encrypt:
-      msg = self.encode(msg)
+      msg = self.encode(bytes(msg, encoding='ascii'))
     else:
       msg = bytes(msg, encoding='ascii')
     cmdsk.sendall(msg)
@@ -288,7 +288,7 @@ class Client(object):
         self.pwd = getpass.getpass('password: ')
         code, res = self.xchg('PASS ' + self.pwd)
         if code == 2: # login success
-          print('login successful as %s' % self.uname)
+          print('login successfully as %s' % self.uname)
           self.logged = True
           code, res = self.xchg('TYPE I')
           if code == 2: # use binay
