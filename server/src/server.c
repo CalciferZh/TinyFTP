@@ -117,7 +117,7 @@ int serve(int connfd, int seed)
 
   // loop routine
   while ((len = read_msg(&state, message))) {
-    printf("%s", message);
+    printf("%s\n", message);
     c_code = parse_command(message, arg);
 
     if (!state.logged && c_code != USER_CODE && c_code != PASS_CODE) {

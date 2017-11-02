@@ -6,6 +6,7 @@ import time
 import ctypes
 import getpass
 import threading
+import traceback
 
 # used for multi-thread receiving
 class DataBlock(object):
@@ -27,24 +28,35 @@ class Client(object):
     self.append = False
     self.encrypt = False
     self.rsalib = ctypes.CDLL('./librsa.so')
-    self.rsalib.decodeStringChar.restype = ctypes.c_char_p
-    self.rsalib.encodeStringChar.restype = ctypes.c_char_p
+    self.rsalib.decodeBytesChar.restype = ctypes.c_char_p
+    self.rsalib.encodeBytesChar.restype = ctypes.c_char_p
     self.pub_exp = None
     self.pub_mod = None
-    self.bts = None
+    self.bts = 94 # magic number related to server
     self.uname = ''
     self.pwd = ''
     self.thread_num = 1
     self.running = True
 
   def decode(self, msg):
-    ret = self.rsalib.decodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
+    ret = self.rsalib.decodeBytesChar(
+      msg,
+      ctypes.c_int(len(msg)),
+      ctypes.c_int(self.bts),
+      bytes(self.pub_exp, encoding='ascii'),
+      bytes(self.pub_mod, encoding='ascii')
+    )
     ret = ret.decode('ascii')
     return ret
 
   def encode(self, msg):
-    ret = self.rsalib.encodeStringChar(bytes(msg, encoding='ascii'), bytes(self.pub_exp, encoding='ascii'), bytes(self.pub_mod, encoding='ascii'))
-    ret = ret.decode('ascii')
+    ret = self.rsalib.encodeBytesChar(
+      bytes(msg, encoding='ascii'),
+      ctypes.c_int(len(msg)),
+      ctypes.c_int(self.bts),
+      bytes(self.pub_exp, encoding='ascii'),
+      bytes(self.pub_mod, encoding='ascii')
+    )
     return ret;
 
   def extract_addr(self, string):
@@ -86,17 +98,21 @@ class Client(object):
   def send(self, msg, cmdsk=None):
     if not cmdsk:
       cmdsk = self.sock
-    msg += '\r\n';
+    msg = msg.strip() + '\r\n'
     if self.encrypt:
       msg = self.encode(msg)
-    cmdsk.sendall(bytes(msg, encoding='ascii'))
+    else:
+      msg = bytes(msg, encoding='ascii')
+    cmdsk.sendall(msg)
 
   def recv(self, cmdsk=None):
     if not cmdsk:
       cmdsk = self.sock
-    res = cmdsk.recv(self.buf_size).decode('ascii').strip()
+    res = cmdsk.recv(self.buf_size)
     if self.encrypt:
       res = self.decode(res)
+    else:
+      res = res.decode('ascii')
     res = res.strip()
     code = int(res[0]) # only first number of the code is concerned
     return code, res
@@ -313,13 +329,10 @@ class Client(object):
       threads.append(\
         threading.Thread(target=self.recv_thread,
                          args=(remote, offset, blocksize, blocks[i])))
-
     for t in threads:
       t.start()
-
     for t in threads:
       t.join()
-
     blocks = sorted(blocks, key=lambda x: x.idx)
     total = bytes()
     for b in blocks:
@@ -328,10 +341,8 @@ class Client(object):
       else:
         print('Error: data block %d is broken' % b.idx)
         return
-
     with open(local, 'wb') as f:
       f.write(total)
-
     elapse = time.time() - elapse
     print('%dkb in %f seconds, %fkb/s in avg' % (size, elapse, size/elapse/1e3))
 
@@ -458,11 +469,15 @@ class Client(object):
       print(res)
     else:
       code, res = self.xchg('ENCR')
-      self.encrypt = True
-      self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')
-      self.bts = int(self.bts)
-      code, res = self.recv()
       print(res)
+      if code == 2:
+        self.encrypt = True
+        self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')
+        self.bts = int(self.bts)
+        code, res = self.recv()
+        print(res)
+      else:
+        print(res)
 
   def command_thread(self, arg):
     if len(arg) == 0:
@@ -506,6 +521,7 @@ class Client(object):
       try:
         getattr(self, "command_%s" % cmd)(arg)
       except Exception as e:
+        traceback.print_exc()
         if type(e) == AttributeError:
           print('invalid command')
         else:

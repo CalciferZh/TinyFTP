@@ -54,12 +54,14 @@ int encodeString(char* src, char** des, bignum* exp, bignum* mod);
 char* decodeStringChar(char* src, char* exp, char* mod);
 char* encodeStringChar(char* src, char* exp, char* mod);
 
-char* encodeBytes(char* src, int len, bignum* exp, bignum* mod);
-char* decodeBytes(char* src, int len, bignum* exp, bignum* mod);
-char* encodeBytesChar(char* src, int len, char* exp, char* mod);
-char* decodeBytesChar(char* src, int len, char* exp, char* mod);
+char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
+char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
+char* encodeBytesChar(char* src, int len, int bytes, char* exp, char* mod);
+char* decodeBytesChar(char* src, int len, int bytes, char* exp, char* mod);
 
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
+
+int get_encode_info(int len, int bytes, int* pck_num);
 
 char itoc(char i);
 void str_inverse(char* str);

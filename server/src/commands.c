@@ -5,8 +5,8 @@ int parse_command(char* message, char* arg)
 {
   char command[16]; // actually all commands are 4 bytes or less
   split_command(message, command, arg);
-  strip_crlf(command);
-  strip_crlf(arg);
+  // strip_crlf(command);
+  // strip_crlf(arg);
   str_lower(command);
 
   int ret = -1;
@@ -334,8 +334,12 @@ int command_list(struct ServerState* state, char* path, int is_long)
   while (fgets(buf, sizeof(buf), fp)) {
     strip_crlf(buf);
     strcat(buf, "\r\n");
-    // printf("%s", buf);
+    // if (state->encrypt) {
+    //   char* data = encodeBytes(buf, strlen(buf), state->priv_exp, state->priv_mod);
+
+    // } else {
     write(state->data_fd, buf, strlen(buf));
+    // }
   }
 
   printf("Command list finish transfer.\n");
@@ -430,7 +434,7 @@ int command_encr(struct ServerState* state)
     free(pub_mod);
 
     state->encrypt = 1;
-    send_msg(state, "200 Hello, this is an encrypted message.");
+    send_msg(state, "200 Hello, here is an encrypted message.");
   }
   return 0;
 }

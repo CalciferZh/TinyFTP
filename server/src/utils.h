@@ -38,12 +38,12 @@ struct ServerState
   int offset;
   int thread;
   int encrypt;
+  int bytes;
   char hip[32];
   bignum* pub_exp;
   bignum* pub_mod;
   bignum* priv_exp;
   bignum* priv_mod;
-  int bytes;
   struct sockaddr_in target_addr;
 };
 

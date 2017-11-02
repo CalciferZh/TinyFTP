@@ -141,14 +141,14 @@ void crypt_to_bytes_test()
   printf("genrating rsa key...\n");
   gen_rsa_key(&pub_exp, &pub_mod, &priv_exp, &priv_mod, &bytes);
   printf("encoding...\n");
-  encoded = encodeBytes(hello, len, pub_exp, pub_mod);
+  encoded = encodeBytes(hello, len, bytes, pub_exp, pub_mod);
 
   int pck_num = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
   int encoded_len = pck_num * BLOCK_LENGTH * (sizeof(word) / sizeof(char));
   printf("encoded length: %d\n", encoded_len);
 
   printf("decoding...\n");
-  decoded = decodeBytes(encoded, encoded_len, priv_exp, priv_mod);
+  decoded = decodeBytes(encoded, encoded_len, bytes, priv_exp, priv_mod);
   printf("Decoded result:\n");
   printf("%s\n", decoded);
 

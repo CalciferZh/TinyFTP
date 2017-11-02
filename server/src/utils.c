@@ -2,15 +2,16 @@
 
 int send_msg(struct ServerState* state, char* str)
 {
-  int p = 0;
   int len = strlen(str);
+  int pck_num;
   char* message;
   if (state->encrypt) {
-    encodeString(str, &message, state->priv_exp, state->priv_mod);
-    len = strlen(message);
+    message = encodeBytes(str, len, state->bytes, state->priv_exp, state->priv_mod);
+    len = get_encode_info(len, state->bytes, &pck_num);
   } else {
     message = str;
   }
+  int p = 0;
   while (p < len) {
     int n = write(state->command_fd, message + p, len - p);
     if (n < 0) {
@@ -23,6 +24,7 @@ int send_msg(struct ServerState* state, char* str)
   }
   if (state->encrypt) {
     free(message);
+    // print('sent encrypted message %d bytes', )
   }
   return 0;
 }
@@ -185,7 +187,6 @@ int recv_file(int des_fd, int src_fd)
 int read_msg(struct ServerState* state, char* str)
 {
   int n = read(state->command_fd, str, DATA_BUF_SIZE);
-  str[n] = '\0';
 
   if (n < 0) {
     sprintf(error_buf, ERROR_PATT, "read", "read_msg");
@@ -195,16 +196,13 @@ int read_msg(struct ServerState* state, char* str)
   }
 
   if (state->encrypt) {
-    char* message;
-    decodeString(str, &message, state->priv_exp, state->priv_mod);
-    printf("%s\n", message);
+    char* message = decodeBytes(str, n, state->bytes, state->priv_exp, state->priv_mod);
     strcpy(str, message);
     free(message);
   }
 
-  n = strlen(str);
-  str[n] = '\0';
-  return n;
+  strip_crlf(str);
+  return strlen(str);
 }
 
 void str_lower(char* str)
@@ -382,6 +380,5 @@ int get_random_port(int* p1, int* p2)
   *p2 = port % 256;
   return port;
 }
-
 
 
