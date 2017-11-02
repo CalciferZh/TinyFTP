@@ -111,6 +111,20 @@ class Client(object):
     print('remote: %s local: %s' % (remote, local))
     return remote, local
 
+  def recv_block_decode(self, sock):
+    read = 0
+    data = sock.recv(self.buf_size)
+    if not data:
+      return None
+    read += len(data)
+    while read % self.blocksize != 0:
+      new_read = sock.recv(self.buf_size)
+      if not new_read:
+        return None
+      data += new_read
+      read += len(data)
+    return self.decode(data)
+
   def send(self, msg, cmdsk=None):
     if not cmdsk:
       cmdsk = self.sock
@@ -126,13 +140,7 @@ class Client(object):
       cmdsk = self.sock
     res = None
     if self.encrypt:
-      read = 0
-      res = cmdsk.recv(self.buf_size)
-      read += len(res)
-      while read % self.blocksize != 0:
-        res += cmdsk.recv(self.buf_size)
-        read += len(res)
-      res = self.decode(res)
+      res = self.recv_block_decode(cmdsk)
     else:
       res = cmdsk.recv(self.buf_size)
     res = res.decode('ascii').strip()
@@ -310,25 +318,37 @@ class Client(object):
         print('resuming transfer...')
       else:
         f = open(local, 'wb')
-
-      data = data_sock.recv(self.buf_size)
-      while data:
-        if self.encrypt:
-          pass
-        f.write(data)
-        total += len(data)
-
+      
+      if self.encrypt:
+        written = 0
+        data = self.recv_block_decode(data_sock)
+        while data:
+          new_recv = len(data)
+          to_write = new_recv if new_recv + written <= file_size else file_size - written
+          f.write(data[:to_write])
+          written += to_write
+          data = self.recv_block_decode(data_sock)
+      else:
+        file_size = 0
         data = data_sock.recv(self.buf_size)
+        while data:
+          f.write(data)
+          file_size += len(data)
+          data = data_sock.recv(self.buf_size)
+
       f.close()
       data_sock.close()
       code, res = self.recv()
       print(res)
       elapse = time.time() - elapse
-      print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
+      print('%dkb in %f seconds, %fkb/s in avg' % (file_size, elapse, file_size/elapse/1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
 
   def command_multirecv(self, arg):
+    if self.encrypt:
+      print('multirecv is not supported in encrypt mode')
+      return
     remote, local = self.extract_rl(arg)
     elapse = time.time()
     if self.thread_num == 1:
@@ -379,9 +399,11 @@ class Client(object):
     elapse = time.time()
     data_sock = self.data_connect('STOR ' + remote)
     if data_sock:
-      t = time.time()
       with open(local, 'rb') as f:
-        data_sock.sendall(f.read())
+        data = f.read()
+        if self.encrypt:
+          data = self.encode(data)
+        data_sock.sendall(data)
       data_sock.close()
       code, res = self.recv()
       print(res)
