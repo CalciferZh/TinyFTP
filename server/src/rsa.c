@@ -866,6 +866,34 @@ char* encodeStringChar(char* src, char* exp_, char* mod_) {
 	return des;
 }
 
+char* encodeBytes(char* src, int len, bignum* exp, bignum* mod) {
+	int pck_num = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+	printf("packet number: %d\n", pck_num);
+
+	int new_len = pck_num * BLOCK_SIZE;
+	printf("length after padding: %d\n", new_len);
+
+	char* new_src = (char*)malloc(new_len);
+	memset(new_src, 0, new_len);
+	memcpy(new_src, src, len);
+	printf("after copying:\n%s\n", new_src);
+
+	bignum* encoded = encodeMessage(new_len, BLOCK_SIZE, new_src, exp, mod);
+	word* ret = (word*)calloc(BLOCK_LENGTH * pck_num, sizeof(word));
+	printf("allocated length: %d\n", BLOCK_LENGTH * pck_num);
+
+	int i = 0;
+	word* offset;
+	for (i = 0; i < pck_num; ++i) {
+		offset = ret + i * BLOCK_LENGTH;
+		memcpy(offset, encoded[i].data, BLOCK_LENGTH * sizeof(word));
+		printf("%u\n", encoded[i].data[0]);
+	}
+	free(new_src);
+	bignum_deinit(encoded);
+	return (char*)ret;
+}
+
 /**
  * Decode the cryptogram of given length, using the private key (exponent, modulus)
  * Each encrypted packet should represent "bytes" characters as per encodeMessage.
@@ -924,6 +952,27 @@ char* decodeStringChar(char* src, char* exp_, char* mod_) {
 	bignum_deinit(mod);
 
 	return des;
+}
+
+char* decodeBytes(char* src, int len, bignum* exp, bignum* mod) {
+	word* real_data = (word*) src;
+	printf("byte length in decoding: %d\n", len);
+	int pck_num = len / (sizeof(int) / sizeof(char)) / BLOCK_LENGTH;
+	printf("infered packet number in decode:%d\n", pck_num);
+
+	bignum* gram = (bignum*)calloc(pck_num, sizeof(bignum));
+	printf("allocated memory\n");
+
+	int i = 0;
+	for (i = 0; i < pck_num; ++i) {
+		gram[i].length = BLOCK_LENGTH;
+		gram[i].capacity = BLOCK_LENGTH;
+		gram[i].data = (word*)(real_data + BLOCK_LENGTH * i);
+		printf("%u\n", gram[i].data[0]);
+	}
+	char* decoded = decodeMessage(pck_num, BLOCK_SIZE, gram, exp, mod);
+	free(gram);
+	return decoded;
 }
 
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {

@@ -26,6 +26,7 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 #define BLOCK_SIZE  94
+#define BLOCK_LENGTH  21
 
 /**
  * Basic limb type. Note that some calculations rely on unsigned overflow wrap-around of this type.
@@ -52,6 +53,12 @@ int decodeString(char* src, char** des, bignum* exp, bignum* mod);
 int encodeString(char* src, char** des, bignum* exp, bignum* mod);
 char* decodeStringChar(char* src, char* exp, char* mod);
 char* encodeStringChar(char* src, char* exp, char* mod);
+
+char* encodeBytes(char* src, int len, bignum* exp, bignum* mod);
+char* decodeBytes(char* src, int len, bignum* exp, bignum* mod);
+char* encodeBytesChar(char* src, int len, char* exp, char* mod);
+char* decodeBytesChar(char* src, int len, char* exp, char* mod);
+
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
 
 char itoc(char i);

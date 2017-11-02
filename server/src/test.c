@@ -88,46 +88,80 @@ void crypt_test()
   free(hello);
 }
 
-void crypt_char_test()
+void bignum_length_test()
 {
-  // printf("crypt_char_test...\n");
- 
-  // int bytes;
-  // char* encoded;
-  // char* decoded;
-  // char* pub_exp;
-  // char* pub_mod;
-  // char* priv_exp;
-  // char* priv_mod;
+  int bytes = 94;
+  int len = 940;
+  char str[940];
+  int i;
+  for (i = 0; i < len; ++i) {
+    str[i] = (rand() % 26) + 'A';
+  }
+  str[len - 1] = '\0';
 
-  // bignum* pub_exp_;
-  // bignum* pub_mod_;
-  // bignum* priv_exp_;
-  // bignum* priv_mod_;
-  // gen_rsa_key(&pub_exp_, &pub_mod_, &priv_exp_, &priv_mod_, &bytes);
+  bignum* pub_exp;
+  bignum* pub_mod;
+  bignum* priv_exp;
+  bignum* priv_mod;
+  printf("Generating RSA key...\n");
+  gen_rsa_key(&pub_exp, &pub_mod, &priv_exp, &priv_mod, &bytes);
+  printf("Finished RSA key genration.\n");
 
-  // pub_exp = bignum_tostring(pub_exp_);
-  // pub_mod = bignum_tostring(pub_mod_);
-  // priv_exp = bignum_tostring(priv_exp_);
-  // priv_mod = bignum_tostring(priv_mod_);
+  bignum* encoded = encodeMessage(940, bytes, str, pub_exp, pub_mod);
+  printf("finish encoding\n");
 
+  int pck_num = 10;
+  for (i = 0; i < pck_num; ++i) {
+    printf("%d\n", (encoded + i)->length);
+  }
+}
 
-  // char* hello = (char*)malloc(32);
-  // strcpy(hello, "Hello, world!");
-  // encodeStringChar(hello, &encoded, priv_exp, priv_mod);
-  // decodeStringChar(encoded, &decoded, pub_exp, pub_mod);
-  
-  // printf("Decoded result:\n");
-  // printf("%s\n", decoded);
+void crypt_to_bytes_test()
+{
+  printf("crypt_test...\n");
+  int bytes;
+  char* encoded;
+  char* decoded;
+  bignum* pub_exp;
+  bignum* pub_mod;
+  bignum* priv_exp;
+  bignum* priv_mod;
 
-  // free(hello);
+  char hello[256];
+  int len = 256;
+  int i;
+  for (i = 0; i < len; ++i) {
+    hello[i] = (char)(rand() % 26) + 'A';
+  }
+  hello[len - 1] = '0';
+  printf("============================ origin ============================\n");
+  printf("%s", hello);
+  printf("================================================================\n");
+
+  printf("genrating rsa key...\n");
+  gen_rsa_key(&pub_exp, &pub_mod, &priv_exp, &priv_mod, &bytes);
+  printf("encoding...\n");
+  encoded = encodeBytes(hello, len, pub_exp, pub_mod);
+
+  int pck_num = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+  int encoded_len = pck_num * BLOCK_LENGTH * (sizeof(word) / sizeof(char));
+  printf("encoded length: %d\n", encoded_len);
+
+  printf("decoding...\n");
+  decoded = decodeBytes(encoded, encoded_len, priv_exp, priv_mod);
+  printf("Decoded result:\n");
+  printf("%s\n", decoded);
+
+  free(encoded);
+  free(decoded);
 }
 
 int main()
 {
   printf("================================================================\n");
-  crypt_test();
-  // crypt_char_test();
+  crypt_to_bytes_test();
+  // bignum_length_test();
+  // crypt_test();
   // command_list_test();
   // split_command_test();
   // parse_addr_test();

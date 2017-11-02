@@ -23,7 +23,8 @@ test: utils.o test.c rsa.o
 	$(CC) $(CFLAGS) -c test.c -o test.o
 	$(CC) $(CFLAGS) test.o utils.o rsa.o -o utest -lpthread
 	./utest
-	rm -rf test.o utest
+	rm -rf ./utest
+	make clean
 
 clean:
 	rm -rf *.o ../server
