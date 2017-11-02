@@ -89,7 +89,7 @@ class Client(object):
     msg += '\r\n';
     if self.encrypt:
       msg = self.encode(msg)
-    cmdsk.send(bytes(msg, encoding='ascii'))
+    cmdsk.sendall(bytes(msg, encoding='ascii'))
 
   def recv(self, cmdsk=None):
     if not cmdsk:
@@ -342,7 +342,7 @@ class Client(object):
     if data_sock:
       t = time.time()
       with open(local, 'rb') as f:
-        data_sock.send(f.read())
+        data_sock.sendall(f.read())
       data_sock.close()
       code, res = self.recv()
       print(res)
