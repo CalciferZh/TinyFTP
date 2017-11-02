@@ -70,7 +70,6 @@ class Client(object):
       bytes(self.pub_mod, encoding='ascii')
     )
     ret = bytearray(buf)
-    print(len(ret))
     return ret;
 
   def extract_addr(self, string):

@@ -12,7 +12,7 @@ int send_msg(struct ServerState* state, char* str)
   } else {
     message = str;
   }
-  printf("sending %d bytes\n", len);
+  // printf("sending %d bytes\n", len);
   int p = 0;
   while (p < len) {
     int n = write(state->command_fd, message + p, len - p);

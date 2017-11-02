@@ -880,18 +880,18 @@ char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 		offset = ret + i * BLOCK_LENGTH;
 		memcpy(offset, encoded[i].data, BLOCK_LENGTH * sizeof(word));
 	}
-	printf("============================== CDEBUG ===========================\n");
-	printf("src: %s\n", src);
-	printf("string length: %d\n", len);
-	printf("length after encoding: %lu\n", BLOCK_LENGTH * pck_num * sizeof(word));
-	for (i = 0; i < pck_num; ++i) {
-		printf("block %d: first number %u, length %d\n", i, encoded[i].data[0], encoded[i].length);
-	}
-	printf("first block data:\n");
-	for (i = 0; i < encoded[0].length; ++i) {
-		printf("%u\n", encoded[0].data[i]);
-	}
-	printf("============================== CDEBUG ===========================\n");
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("string length: %d\n", len);
+	// printf("length after encoding: %lu\n", BLOCK_LENGTH * pck_num * sizeof(word));
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, encoded[i].data[0], encoded[i].length);
+	// }
+	// printf("first block data:\n");
+	// for (i = 0; i < encoded[0].length; ++i) {
+	// 	printf("%u\n", encoded[0].data[i]);
+	// }
+	// printf("============================== CDEBUG ===========================\n");
 	free(new_src);
 	bignum_deinit(encoded);
 	return (char*)ret;
@@ -1007,28 +1007,28 @@ char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
 
 	char* decoded = decodeMessage(pck_num, bytes, gram, exp, mod);
 
-	printf("============================== CDEBUG ===========================\n");
-	printf("received len: %d\n", len);
-	printf("infered pck_num: %d\n", pck_num);
-	printf("last datagram length: %d\n", last_length);
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("received len: %d\n", len);
+	// printf("infered pck_num: %d\n", pck_num);
+	// printf("last datagram length: %d\n", last_length);
 
-	for (i = 0; i < pck_num; ++i) {
-		printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
-	}
-	printf("first block data:\n");
-	for (i = 0; i < gram[0].length; ++i) {
-		printf("%u\n", gram[0].data[i]);
-	}
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	// }
+	// printf("first block data:\n");
+	// for (i = 0; i < gram[0].length; ++i) {
+	// 	printf("%u\n", gram[0].data[i]);
+	// }
 
-	// printf("result: %s\n", decoded);
-	for (i = 0; i < pck_num * bytes; ++i) {
-		printf("%c", decoded[i]);
-	}
-	printf("\n");
-	for (i = 0; i < pck_num; ++i) {
-		printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
-	}
-	printf("============================== CDEBUG ===========================\n");
+	// // printf("result: %s\n", decoded);
+	// for (i = 0; i < pck_num * bytes; ++i) {
+	// 	printf("%c", decoded[i]);
+	// }
+	// printf("\n");
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	// }
+	// printf("============================== CDEBUG ===========================\n");
 
 	free(gram);
 	return decoded;
