@@ -147,7 +147,7 @@ class Client(object):
       res = self.recv_block_decode(cmdsk)
     else:
       res = cmdsk.recv(self.buf_size)
-    res = res.decode('ascii').strip()
+    res = res.decode('ascii').strip('\r\n\0')
     code = int(res[0]) # only first number of the code is concerned
     return code, res
 
@@ -299,9 +299,9 @@ class Client(object):
           self.logged = True
           code, res = self.xchg('TYPE I')
           if code == 2: # use binay
-            print('using binary.')
+            print('using binary')
           else:
-            print('server refused using binary.')
+            print('server refused using binary')
         else:
           print(res)
           print('login failed')
@@ -445,7 +445,7 @@ class Client(object):
       while packet:
         data += packet.decode('ascii')
         packet = data_sock.recv(self.buf_size)
-      print(data)
+      print(data.strip())
       code, res = self.recv()
       print(res)
       data_sock.close()
