@@ -278,13 +278,13 @@ int command_stor(struct ServerState* state, char* path)
   }
 
   send_msg(state, RES_TRANS_START);
-  printf("start receiving...\n");
+  printf("start receiving\n");
   if (recv_file(des_fd, state->data_fd, state, file_size) == 0) {
     send_msg(state, RES_TRANS_SUCCESS);
   } else {
     send_msg(state, RES_TRANS_FAIL);
   }
-  printf("finished receiving...\n");
+  printf("finished receiving\n");
   close_connections(state);
   return 0;
 }
@@ -429,7 +429,7 @@ int command_encr(struct ServerState* state)
     state->priv_exp = NULL;
     state->priv_mod = NULL;
   } else {
-    printf("Generating RSA key...\n");
+    printf("Generating RSA key\n");
     gen_rsa_key(&(state->pub_exp), &(state->pub_mod),
       &(state->priv_exp), &(state->priv_mod), &(state->bytes));
     printf("finished rsa-key generation\n");

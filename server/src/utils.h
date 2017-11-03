@@ -21,8 +21,8 @@
 #include "rsa.h"
 
 #define ERROR_PATT             "Error %s() in %s()"
-// #define DATA_BUF_SIZE_SMALL 1974 // make it a multiple of BLOCK_SIZE
-#define DATA_BUF_SIZE_SMALL 5376 // make it a multiple of BLOCK_LENGTH
+#define READ_FOR_SEND_BUF_SIZE 5248 // make it a multiple of BLOCK_SIZE
+#define RECV_FOR_WRTE_BUF_SIZE 5376 // make it a multiple of BLOCK_LENGTH_BYTES
 #define DATA_BUF_SIZE 8192
 #define DATA_BUF_SIZE_LARGE 1048576
 #define PORT_MODE 0
@@ -58,6 +58,8 @@ struct write_para
 
 char error_buf[128];
 
+int writeall(int fd, char* buf, int len);
+int readall(int fd, char* buf, int len);
 int send_msg(struct ServerState* state, char* str);
 int read_msg(struct ServerState* state, char* message);
 int send_file(int des_fd, int src_fd, struct ServerState* state);

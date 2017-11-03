@@ -17,20 +17,6 @@ bignum NUMS[11] = {{1, 1, DATA0},{1, 1, DATA1},{1, 1, DATA2},
 // code wrote myself
 
 /**
- * Encode the message m using public exponent and modulus, result = m^e mod n
- */
-void encode(bignum* m, bignum* e, bignum* n, bignum* result) {
-	bignum_modpow(m, e, n, result);
-}
-
-/**
- * Decode cryptogram c using private exponent and public modulus, result = c^d mod n
- */
-void decode(bignum* c, bignum* d, bignum* n, bignum* result) {
-	bignum_modpow(c, d, n, result);
-}
-
-/**
  * Encode the message of given length, using the public key (exponent, modulus)
  * The resulting array will be of size len/bytes, each index being the encryption
  * of "bytes" consecutive characters, given by m = (m1 + m2*128 + m3*128^2 + ..),
@@ -735,7 +721,7 @@ void bignum_imultiply(bignum* source, bignum* mult) {
 void bignum_multiply(bignum* result, bignum* b1, bignum* b2) {
 	int i, j, k;
 	word carry, temp;
-	unsigned long long int prod; /* Long for intermediate product... this is not portable and should probably be changed */
+	unsigned long long int prod; /* Long for intermediate product this is not portable and should probably be changed */
 	if(b1->length + b2->length > result->capacity) {
 		result->capacity = b1->length + b2->length;
 		result->data = realloc(result->data, result->capacity * sizeof(word));
@@ -1175,3 +1161,16 @@ int readFile(FILE* fd, char** buffer, int bytes) {
 	return len;
 }
 
+/**
+ * Encode the message m using public exponent and modulus, result = m^e mod n
+ */
+void encode(bignum* m, bignum* e, bignum* n, bignum* result) {
+	bignum_modpow(m, e, n, result);
+}
+
+/**
+ * Decode cryptogram c using private exponent and public modulus, result = c^d mod n
+ */
+void decode(bignum* c, bignum* d, bignum* n, bignum* result) {
+	bignum_modpow(c, d, n, result);
+}

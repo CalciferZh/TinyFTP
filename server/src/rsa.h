@@ -62,8 +62,6 @@ char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp, char*
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
 int get_encode_info(int len, int bytes, int* pck_num);
 int get_decode_info(int len, int bytes, int* pck_num);
-void encode(bignum* m, bignum* e, bignum* n, bignum* result);
-void decode(bignum* c, bignum* d, bignum* n, bignum* result);
 bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus);
 char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
 char itoc(char i);
@@ -104,6 +102,8 @@ int probablePrime(bignum* n, int k);
 void randPrime(int numDigits, bignum* result);
 void randExponent(bignum* phi, int n, bignum* result);
 int readFile(FILE* fd, char** buffer, int bytes);
+void encode(bignum* m, bignum* e, bignum* n, bignum* result);
+void decode(bignum* c, bignum* d, bignum* n, bignum* result);
 
 #endif
 
