@@ -351,7 +351,7 @@ class Client(object):
       code, res = self.recv()
       print(res)
       elapse = time.time() - elapse
-      print('%dkb in %f seconds, %fkb/s in avg' % (file_size, elapse, file_size/elapse/1e3))
+      print('%fkb in %f seconds, %fkb/s in avg' % (file_size/1e3, elapse, file_size/elapse/1e3))
     else:
       print('Error in Client.command_recv: no data_sock')
 
@@ -402,7 +402,7 @@ class Client(object):
     with open(local, 'wb') as f:
       f.write(total)
     elapse = time.time() - elapse
-    print('%dkb in %f seconds, %fkb/s in avg' % (size, elapse, size/elapse/1e3))
+    print('%fkb in %f seconds, %fkb/s in avg' % (size/1e3, elapse, size/elapse/1e3))
 
   def command_send(self, arg):
     remote, local = self.extract_rl(arg)
@@ -428,7 +428,7 @@ class Client(object):
       code, res = self.recv()
       print(res)
       elapse = time.time() - elapse
-      print('%dkb in %f seconds, %fkb/s in avg' % (total / 1000, elapse, total/elapse/1e3))
+      print('%fkb in %f seconds, %fkb/s in avg' % (total/1e3, elapse, total/elapse/1e3))
     else:
       print('Error in Client.command_send: no data_sock')
 

@@ -49,23 +49,26 @@ typedef struct _bignum {
   word* data;
 } bignum;
 
-
+// ============================================================================
+// code wrote myself
 int decodeString(char* src, char** des, bignum* exp, bignum* mod);
 int encodeString(char* src, char** des, bignum* exp, bignum* mod);
 char* decodeStringChar(char* src, char* exp, char* mod);
 char* encodeStringChar(char* src, char* exp, char* mod);
-
 char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
 char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod);
 char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp, char* mod);
 char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp, char* mod);
-
 void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes);
-
 int get_encode_info(int len, int bytes, int* pck_num);
 int get_decode_info(int len, int bytes, int* pck_num);
-
+void encode(bignum* m, bignum* e, bignum* n, bignum* result);
+void decode(bignum* c, bignum* d, bignum* n, bignum* result);
+bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus);
+char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
 char itoc(char i);
+// ============================================================================
+
 void str_inverse(char* str);
 bignum* bignum_init();
 void bignum_deinit(bignum* b);
@@ -101,10 +104,6 @@ int probablePrime(bignum* n, int k);
 void randPrime(int numDigits, bignum* result);
 void randExponent(bignum* phi, int n, bignum* result);
 int readFile(FILE* fd, char** buffer, int bytes);
-void encode(bignum* m, bignum* e, bignum* n, bignum* result);
-void decode(bignum* c, bignum* d, bignum* n, bignum* result);
-bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus);
-char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus);
 
 #endif
 

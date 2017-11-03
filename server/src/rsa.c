@@ -13,6 +13,431 @@ bignum NUMS[11] = {{1, 1, DATA0},{1, 1, DATA1},{1, 1, DATA2},
                    {1, 1, DATA6},{1, 1, DATA7},{1, 1, DATA8},
                    {1, 1, DATA9},{1, 1, DATA10}};
 
+// ============================================================================
+// code wrote myself
+
+/**
+ * Encode the message m using public exponent and modulus, result = m^e mod n
+ */
+void encode(bignum* m, bignum* e, bignum* n, bignum* result) {
+	bignum_modpow(m, e, n, result);
+}
+
+/**
+ * Decode cryptogram c using private exponent and public modulus, result = c^d mod n
+ */
+void decode(bignum* c, bignum* d, bignum* n, bignum* result) {
+	bignum_modpow(c, d, n, result);
+}
+
+/**
+ * Encode the message of given length, using the public key (exponent, modulus)
+ * The resulting array will be of size len/bytes, each index being the encryption
+ * of "bytes" consecutive characters, given by m = (m1 + m2*128 + m3*128^2 + ..),
+ * encoded = m^exponent mod modulus
+ */
+bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus) {
+	/* Calloc works here because capacity = 0 forces a realloc by callees but we should really
+	 * bignum_init() all of these */
+	int i, j;
+	unsigned char* data = (unsigned char*) message;
+	bignum *encoded = calloc(len/bytes, sizeof(bignum));
+	bignum *num256 = bignum_init(), *num256pow = bignum_init();
+	bignum *x = bignum_init(), *current = bignum_init();
+	bignum_fromint(num256, 256);
+	bignum_fromint(num256pow, 1);
+	for(i = 0; i < len; i += bytes) {
+		bignum_fromint(x, 0);
+		bignum_fromint(num256pow, 1);
+		/* Compute buffer[0] + buffer[1]*128 + buffer[2]*128^2 etc (base 128 representation for characters->int encoding)*/
+		for(j = 0; j < bytes; j++) {
+			bignum_fromint(current, data[i + j]);
+			bignum_imultiply(current, num256pow);
+			bignum_iadd(x, current); /*x += buffer[i + j] * (1 << (7 * j)) */
+			bignum_imultiply(num256pow, num256);
+		}
+		// printf("==================== ENCODED NOT ENCRYPTED ===================\n");
+		// int k;
+		// for (k = 0; k < x[0].length; ++k) {
+		// 	printf("%u\n", x[0].data[k]);
+		// }
+
+		encode(x, exponent, modulus, &encoded[i/bytes]);
+	}
+	return encoded;
+}
+
+int encodeString(char* src, char** des, bignum* exp, bignum* mod) {
+	bignum* encoded;
+
+	int len = strlen(src);
+	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
+	int sz = pck_num * BLOCK_SIZE;
+	char* cpy = (char*)malloc(sz);
+	strcpy(cpy, src);
+
+	// zero padding to a multiple of bytes
+	int i;
+	for (i = len; i < sz; ++i) {
+		cpy[i] = 0;
+	}
+	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
+
+	// here we only support to encrypt the first 94 bytes
+	// because I don't have time to finish them all
+	// so even "encoded" is a pointer to an array
+	// we only translate the first element
+	*des = bignum_tostring(encoded);
+
+	bignum_deinit(encoded);
+	free(cpy);
+	// the return value is how many packet we got
+	// return pck_num;
+	return 1;
+}
+
+char* encodeStringChar(char* src, char* exp_, char* mod_) {
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	bignum* encoded;
+
+	int len = strlen(src);
+	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
+	int sz = pck_num * BLOCK_SIZE;
+	char* cpy = (char*)malloc(sz);
+	strcpy(cpy, src);
+
+	// zero padding to a multiple of bytes
+	int i;
+	for (i = len; i < sz; ++i) {
+		cpy[i] = 0;
+	}
+	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
+
+	// here we only support to encrypt the first 94 bytes
+	// because I don't have time to finish them all
+	// so even "encoded" is a pointer to an array
+	// we only translate the first element
+	char* des = bignum_tostring(encoded);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("encode result: %s\n", des);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(encoded);
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+	free(cpy);
+	// the return value is how many packet we got
+	// return pck_num;
+	return des;
+}
+
+char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
+	int pck_num;
+	int new_len = get_encode_info(len, bytes, &pck_num);
+	char* new_src = (char*)malloc(new_len);
+	memset(new_src, 0, new_len);
+	memcpy(new_src, src, len);
+	int i = 0;
+
+	// printf("========================== RAW =============================\n");
+	// for (i = 0; i < len; ++i) {
+	// 	printf("%d ", src[i]);
+	// }
+	// printf("\n");
+
+	bignum* encoded = encodeMessage(new_len, bytes, new_src, exp, mod);
+
+	// printf("=================== ENCODED AND ENCRYPTED ======================\n");
+	// for (i = 0; i < 21; ++i) {
+	// 	printf("%u\n", encoded[0].data[i]);
+	// }
+
+	word* ret = (word*)calloc(BLOCK_LENGTH * pck_num, sizeof(word));
+	word* offset;
+	for (i = 0; i < pck_num; ++i) {
+		offset = ret + i * BLOCK_LENGTH;
+		memcpy(offset, encoded[i].data, BLOCK_LENGTH * sizeof(word));
+	}
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("string length: %d\n", len);
+	// printf("length after encoding: %lu\n", BLOCK_LENGTH * pck_num * sizeof(word));
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, encoded[i].data[0], encoded[i].length);
+	// }
+	// printf("first block data:\n");
+	// for (i = 0; i < encoded[0].length; ++i) {
+	// 	printf("%u\n", encoded[0].data[i]);
+	// }
+	// printf("============================== CDEBUG ===========================\n");
+	free(new_src);
+	bignum_deinit(encoded);
+	return (char*)ret;
+}
+
+char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	char* res = encodeBytes(src, len, bytes, exp, mod);
+
+	int pck_num;
+	get_encode_info(len, bytes, &pck_num);
+	int res_len = pck_num * BLOCK_LENGTH * sizeof(word);
+	memcpy(buf, res, res_len);
+	free(res);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("len: %d\n", len);
+	// printf("bytes: %d\n", bytes);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+
+	return res;
+}
+
+/**
+ * Decode the cryptogram of given length, using the private key (exponent, modulus)
+ * Each encrypted packet should represent "bytes" characters as per encodeMessage.
+ * The returned message will be of size len * bytes.
+ */
+char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus) {
+	unsigned char* decoded = (unsigned char*)malloc(len * bytes * sizeof(char));
+	int i, j;
+	bignum *x = bignum_init(), *remainder = bignum_init();
+	bignum *num256 = bignum_init();
+	bignum_fromint(num256, 256);
+	for(i = 0; i < len; i++) {
+		decode(&cryptogram[i], exponent, modulus, x);
+
+		// printf("==================== DECRYPTED NOT DECODED ===================\n");
+		// int k;
+		// for (k = 0; k < x[0].length; ++k) {
+		// 	printf("%u\n", x[0].data[k]);
+		// }
+
+		for(j = 0; j < bytes; j++) {
+			bignum_idivider(x, num256, remainder);
+			if(remainder->length == 0) decoded[i*bytes + j] = '\0';
+			else decoded[i*bytes + j] = (char)(remainder->data[0]);
+		}
+	}
+	return (char*)decoded;
+}
+
+int decodeString(char* src, char** des, bignum* exp, bignum* mod) {
+	bignum* data = bignum_init();
+	bignum_fromstring(data, src);
+
+	// similarly we decode the first block only
+	*des = decodeMessage(1, BLOCK_SIZE + 1, data, exp, mod);
+
+	bignum_deinit(data);
+	return 0;
+}
+
+char* decodeStringChar(char* src, char* exp_, char* mod_) {
+	bignum* data = bignum_init();
+	bignum_fromstring(data, src);
+
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	// similarly we decode the first block only
+	char* des = decodeMessage(1, BLOCK_SIZE, data, exp, mod);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("src: %s\n", src);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("decode result: %s\n", des);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(data);
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+
+	return des;
+}
+
+char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
+	word* real_data = (word*) src;
+	// printf("byte length in decoding: %d\n", len);
+	int pck_num;
+	int last_length = get_decode_info(len, bytes, &pck_num);
+	// printf("infered packet number in decode: %d\n", pck_num);
+
+	bignum* gram = (bignum*)calloc(pck_num, sizeof(bignum));
+	// printf("allocated memory\n");
+
+	int i = 0;
+	for (i = 0; i < pck_num; ++i) {
+		gram[i].length = BLOCK_LENGTH;
+		gram[i].capacity = BLOCK_LENGTH;
+		gram[i].data = (word*)(real_data + BLOCK_LENGTH * i);
+		// printf("%u\n", gram[i].data[0]);
+	}
+	gram[pck_num - 1].length = last_length;
+	gram[pck_num - 1].capacity = last_length;
+
+	// printf("========================== RAW RECEIVED ========================\n");
+	// for (i = 0; i < gram[0].length; ++i) {
+	// 	printf("%u\n", gram[0].data[i]);
+	// }
+
+	char* decoded = decodeMessage(pck_num, bytes, gram, exp, mod);
+
+	// printf("========================== DECODED =============================\n");
+	// for (i = 0; i < len; ++i) {
+	// 	printf("%d ", decoded[i]);
+	// }
+	// printf("\n");
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("received len: %d\n", len);
+	// printf("infered pck_num: %d\n", pck_num);
+	// printf("last datagram length: %d\n", last_length);
+
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	// }
+	// printf("first block data:\n");
+	// for (i = 0; i < gram[0].length; ++i) {
+	// 	printf("%u\n", gram[0].data[i]);
+	// }
+
+	// // printf("result: %s\n", decoded);
+	// for (i = 0; i < pck_num * bytes; ++i) {
+	// 	printf("%c", decoded[i]);
+	// }
+	// printf("\n");
+	// for (i = 0; i < pck_num; ++i) {
+	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
+	// }
+	// printf("============================== CDEBUG ===========================\n");
+
+	free(gram);
+	return decoded;
+}
+
+char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
+	bignum* exp = bignum_init();
+	bignum_fromstring(exp, exp_);
+
+	bignum* mod = bignum_init();
+	bignum_fromstring(mod, mod_);
+
+	char* res = decodeBytes(src, len, bytes, exp, mod);
+	int pck_num = len / (sizeof(word) / sizeof(char)) / BLOCK_LENGTH;
+	int decoded_len = pck_num * bytes;
+	memcpy(buf, res, decoded_len);
+	free(res);
+
+	// printf("============================== CDEBUG ===========================\n");
+	// printf("len: %d\n", len);
+	// printf("bytes: %d\n", bytes);
+	// printf("exp: %s\n", exp_);
+	// printf("mod: %s\n", mod_);
+	// printf("result: %s\n", res);
+	// printf("============================== CDEBUG ===========================\n");
+
+	bignum_deinit(exp);
+	bignum_deinit(mod);
+
+	return res;
+}
+
+void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {
+	bignum *p = bignum_init(), *q = bignum_init(), *n = bignum_init();
+	bignum *phi = bignum_init(), *e = bignum_init(), *d = bignum_init();
+	bignum *temp1 = bignum_init(), *temp2 = bignum_init();
+	bignum *bbytes = bignum_init(), *shift = bignum_init();
+
+	*pub_exp = bignum_init();
+	*pub_mod = bignum_init();
+	*priv_exp = bignum_init();
+	*priv_mod = bignum_init();
+	
+	randPrime(FACTOR_DIGITS, p);
+	// printf("Got first prime factor\n");
+	
+	randPrime(FACTOR_DIGITS, q);
+	// printf("Got second prime factor\n");
+	
+	bignum_multiply(n, p, q);
+	// printf("Got modulus\n");
+	
+	bignum_subtract(temp1, p, &NUMS[1]);
+	bignum_subtract(temp2, q, &NUMS[1]);
+	bignum_multiply(phi, temp1, temp2); /* phi = (p - 1) * (q - 1) */
+	// printf("Got totient\n");
+	
+	randExponent(phi, EXPONENT_MAX, e);
+	// printf("Chose public exponent\n");
+	// printf("Got public key\n");
+	bignum_copy(e, *pub_exp);
+	bignum_copy(n, *pub_mod);
+	
+	bignum_inverse(e, phi, d);
+
+	// printf("Got private key\n");
+	bignum_copy(d, *priv_exp);
+	bignum_copy(n, *priv_mod);
+
+	*bytes = -1;
+	bignum_fromint(shift, 1 << 8);
+	bignum_fromint(bbytes, 1);
+	while(bignum_less(bbytes, n)) {
+		bignum_imultiply(bbytes, shift);
+		(*bytes)++;
+	}
+
+	bignum_deinit(p);
+	bignum_deinit(q);
+	bignum_deinit(n);
+	bignum_deinit(phi);
+	bignum_deinit(e);
+	bignum_deinit(d);
+	bignum_deinit(bbytes);
+	bignum_deinit(shift);
+	bignum_deinit(temp1);
+	bignum_deinit(temp2);
+}
+
+int get_encode_info(int len, int bytes, int* pck_num) {
+	*pck_num = (len + bytes - 1) / bytes;
+	return (*pck_num * bytes);
+}
+
+int get_decode_info(int len, int bytes, int* pck_num) {
+	int block_length = (sizeof(int) / sizeof(char)) * BLOCK_LENGTH;
+	*pck_num = (len + block_length - 1) / block_length;
+	return (block_length - (*pck_num * block_length - len)) / (sizeof(int) / sizeof(char));
+}
+
+// ============================================================================
+
+
+
 /**
  * Initialize a bignum structure. This is the only way to safely create a bignum
  * and should be called where-ever one is declared. (We realloc the memory in all
@@ -750,420 +1175,3 @@ int readFile(FILE* fd, char** buffer, int bytes) {
 	return len;
 }
 
-/**
- * Encode the message m using public exponent and modulus, result = m^e mod n
- */
-void encode(bignum* m, bignum* e, bignum* n, bignum* result) {
-	bignum_modpow(m, e, n, result);
-}
-
-/**
- * Decode cryptogram c using private exponent and public modulus, result = c^d mod n
- */
-void decode(bignum* c, bignum* d, bignum* n, bignum* result) {
-	bignum_modpow(c, d, n, result);
-}
-
-/**
- * Encode the message of given length, using the public key (exponent, modulus)
- * The resulting array will be of size len/bytes, each index being the encryption
- * of "bytes" consecutive characters, given by m = (m1 + m2*128 + m3*128^2 + ..),
- * encoded = m^exponent mod modulus
- */
-bignum *encodeMessage(int len, int bytes, char *message, bignum *exponent, bignum *modulus) {
-	/* Calloc works here because capacity = 0 forces a realloc by callees but we should really
-	 * bignum_init() all of these */
-	int i, j;
-	unsigned char* data = (unsigned char*) message;
-	bignum *encoded = calloc(len/bytes, sizeof(bignum));
-	bignum *num256 = bignum_init(), *num256pow = bignum_init();
-	bignum *x = bignum_init(), *current = bignum_init();
-	bignum_fromint(num256, 256);
-	bignum_fromint(num256pow, 1);
-	for(i = 0; i < len; i += bytes) {
-		bignum_fromint(x, 0);
-		bignum_fromint(num256pow, 1);
-		/* Compute buffer[0] + buffer[1]*128 + buffer[2]*128^2 etc (base 128 representation for characters->int encoding)*/
-		for(j = 0; j < bytes; j++) {
-			bignum_fromint(current, data[i + j]);
-			bignum_imultiply(current, num256pow);
-			bignum_iadd(x, current); /*x += buffer[i + j] * (1 << (7 * j)) */
-			bignum_imultiply(num256pow, num256);
-		}
-		// printf("==================== ENCODED NOT ENCRYPTED ===================\n");
-		// int k;
-		// for (k = 0; k < x[0].length; ++k) {
-		// 	printf("%u\n", x[0].data[k]);
-		// }
-
-		encode(x, exponent, modulus, &encoded[i/bytes]);
-	}
-	return encoded;
-}
-
-int encodeString(char* src, char** des, bignum* exp, bignum* mod) {
-	bignum* encoded;
-
-	int len = strlen(src);
-	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
-	int sz = pck_num * BLOCK_SIZE;
-	char* cpy = (char*)malloc(sz);
-	strcpy(cpy, src);
-
-	// zero padding to a multiple of bytes
-	int i;
-	for (i = len; i < sz; ++i) {
-		cpy[i] = 0;
-	}
-	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
-
-	// here we only support to encrypt the first 94 bytes
-	// because I don't have time to finish them all
-	// so even "encoded" is a pointer to an array
-	// we only translate the first element
-	*des = bignum_tostring(encoded);
-
-	bignum_deinit(encoded);
-	free(cpy);
-	// the return value is how many packet we got
-	// return pck_num;
-	return 1;
-}
-
-char* encodeStringChar(char* src, char* exp_, char* mod_) {
-	bignum* exp = bignum_init();
-	bignum_fromstring(exp, exp_);
-	bignum* mod = bignum_init();
-	bignum_fromstring(mod, mod_);
-
-	bignum* encoded;
-
-	int len = strlen(src);
-	int pck_num = ((len + BLOCK_SIZE - 1) / BLOCK_SIZE);
-	int sz = pck_num * BLOCK_SIZE;
-	char* cpy = (char*)malloc(sz);
-	strcpy(cpy, src);
-
-	// zero padding to a multiple of bytes
-	int i;
-	for (i = len; i < sz; ++i) {
-		cpy[i] = 0;
-	}
-	encoded = encodeMessage(sz, BLOCK_SIZE, cpy, exp, mod);
-
-	// here we only support to encrypt the first 94 bytes
-	// because I don't have time to finish them all
-	// so even "encoded" is a pointer to an array
-	// we only translate the first element
-	char* des = bignum_tostring(encoded);
-
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("src: %s\n", src);
-	// printf("exp: %s\n", exp_);
-	// printf("mod: %s\n", mod_);
-	// printf("encode result: %s\n", des);
-	// printf("============================== CDEBUG ===========================\n");
-
-	bignum_deinit(encoded);
-	bignum_deinit(exp);
-	bignum_deinit(mod);
-	free(cpy);
-	// the return value is how many packet we got
-	// return pck_num;
-	return des;
-}
-
-char* encodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
-	int pck_num;
-	int new_len = get_encode_info(len, bytes, &pck_num);
-	char* new_src = (char*)malloc(new_len);
-	memset(new_src, 0, new_len);
-	memcpy(new_src, src, len);
-	int i = 0;
-
-	// printf("========================== RAW =============================\n");
-	// for (i = 0; i < len; ++i) {
-	// 	printf("%d ", src[i]);
-	// }
-	// printf("\n");
-
-	bignum* encoded = encodeMessage(new_len, bytes, new_src, exp, mod);
-
-	// printf("=================== ENCODED AND ENCRYPTED ======================\n");
-	// for (i = 0; i < 21; ++i) {
-	// 	printf("%u\n", encoded[0].data[i]);
-	// }
-
-	word* ret = (word*)calloc(BLOCK_LENGTH * pck_num, sizeof(word));
-	word* offset;
-	for (i = 0; i < pck_num; ++i) {
-		offset = ret + i * BLOCK_LENGTH;
-		memcpy(offset, encoded[i].data, BLOCK_LENGTH * sizeof(word));
-	}
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("src: %s\n", src);
-	// printf("string length: %d\n", len);
-	// printf("length after encoding: %lu\n", BLOCK_LENGTH * pck_num * sizeof(word));
-	// for (i = 0; i < pck_num; ++i) {
-	// 	printf("block %d: first number %u, length %d\n", i, encoded[i].data[0], encoded[i].length);
-	// }
-	// printf("first block data:\n");
-	// for (i = 0; i < encoded[0].length; ++i) {
-	// 	printf("%u\n", encoded[0].data[i]);
-	// }
-	// printf("============================== CDEBUG ===========================\n");
-	free(new_src);
-	bignum_deinit(encoded);
-	return (char*)ret;
-}
-
-char* encodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
-	bignum* exp = bignum_init();
-	bignum_fromstring(exp, exp_);
-
-	bignum* mod = bignum_init();
-	bignum_fromstring(mod, mod_);
-
-	char* res = encodeBytes(src, len, bytes, exp, mod);
-
-	int pck_num;
-	get_encode_info(len, bytes, &pck_num);
-	int res_len = pck_num * BLOCK_LENGTH * sizeof(word);
-	memcpy(buf, res, res_len);
-	free(res);
-
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("src: %s\n", src);
-	// printf("len: %d\n", len);
-	// printf("bytes: %d\n", bytes);
-	// printf("exp: %s\n", exp_);
-	// printf("mod: %s\n", mod_);
-	// printf("============================== CDEBUG ===========================\n");
-
-	bignum_deinit(exp);
-	bignum_deinit(mod);
-
-	return res;
-}
-
-/**
- * Decode the cryptogram of given length, using the private key (exponent, modulus)
- * Each encrypted packet should represent "bytes" characters as per encodeMessage.
- * The returned message will be of size len * bytes.
- */
-char *decodeMessage(int len, int bytes, bignum *cryptogram, bignum *exponent, bignum *modulus) {
-	unsigned char* decoded = (unsigned char*)malloc(len * bytes * sizeof(char));
-	int i, j;
-	bignum *x = bignum_init(), *remainder = bignum_init();
-	bignum *num256 = bignum_init();
-	bignum_fromint(num256, 256);
-	for(i = 0; i < len; i++) {
-		decode(&cryptogram[i], exponent, modulus, x);
-
-		// printf("==================== DECRYPTED NOT DECODED ===================\n");
-		// int k;
-		// for (k = 0; k < x[0].length; ++k) {
-		// 	printf("%u\n", x[0].data[k]);
-		// }
-
-		for(j = 0; j < bytes; j++) {
-			bignum_idivider(x, num256, remainder);
-			if(remainder->length == 0) decoded[i*bytes + j] = '\0';
-			else decoded[i*bytes + j] = (char)(remainder->data[0]);
-		}
-	}
-	return (char*)decoded;
-}
-
-int decodeString(char* src, char** des, bignum* exp, bignum* mod) {
-	bignum* data = bignum_init();
-	bignum_fromstring(data, src);
-
-	// similarly we decode the first block only
-	*des = decodeMessage(1, BLOCK_SIZE + 1, data, exp, mod);
-
-	bignum_deinit(data);
-	return 0;
-}
-
-char* decodeStringChar(char* src, char* exp_, char* mod_) {
-	bignum* data = bignum_init();
-	bignum_fromstring(data, src);
-
-	bignum* exp = bignum_init();
-	bignum_fromstring(exp, exp_);
-
-	bignum* mod = bignum_init();
-	bignum_fromstring(mod, mod_);
-
-	// similarly we decode the first block only
-	char* des = decodeMessage(1, BLOCK_SIZE, data, exp, mod);
-
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("src: %s\n", src);
-	// printf("exp: %s\n", exp_);
-	// printf("mod: %s\n", mod_);
-	// printf("decode result: %s\n", des);
-	// printf("============================== CDEBUG ===========================\n");
-
-	bignum_deinit(data);
-	bignum_deinit(exp);
-	bignum_deinit(mod);
-
-	return des;
-}
-
-char* decodeBytes(char* src, int len, int bytes, bignum* exp, bignum* mod) {
-	word* real_data = (word*) src;
-	// printf("byte length in decoding: %d\n", len);
-	int pck_num;
-	int last_length = get_decode_info(len, bytes, &pck_num);
-	// printf("infered packet number in decode: %d\n", pck_num);
-
-	bignum* gram = (bignum*)calloc(pck_num, sizeof(bignum));
-	// printf("allocated memory\n");
-
-	int i = 0;
-	for (i = 0; i < pck_num; ++i) {
-		gram[i].length = BLOCK_LENGTH;
-		gram[i].capacity = BLOCK_LENGTH;
-		gram[i].data = (word*)(real_data + BLOCK_LENGTH * i);
-		// printf("%u\n", gram[i].data[0]);
-	}
-	gram[pck_num - 1].length = last_length;
-	gram[pck_num - 1].capacity = last_length;
-
-	// printf("========================== RAW RECEIVED ========================\n");
-	// for (i = 0; i < gram[0].length; ++i) {
-	// 	printf("%u\n", gram[0].data[i]);
-	// }
-
-	char* decoded = decodeMessage(pck_num, bytes, gram, exp, mod);
-
-	// printf("========================== DECODED =============================\n");
-	// for (i = 0; i < len; ++i) {
-	// 	printf("%d ", decoded[i]);
-	// }
-	// printf("\n");
-
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("received len: %d\n", len);
-	// printf("infered pck_num: %d\n", pck_num);
-	// printf("last datagram length: %d\n", last_length);
-
-	// for (i = 0; i < pck_num; ++i) {
-	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
-	// }
-	// printf("first block data:\n");
-	// for (i = 0; i < gram[0].length; ++i) {
-	// 	printf("%u\n", gram[0].data[i]);
-	// }
-
-	// // printf("result: %s\n", decoded);
-	// for (i = 0; i < pck_num * bytes; ++i) {
-	// 	printf("%c", decoded[i]);
-	// }
-	// printf("\n");
-	// for (i = 0; i < pck_num; ++i) {
-	// 	printf("block %d: first number %u, length %d\n", i, gram[i].data[0], gram[i].length);
-	// }
-	// printf("============================== CDEBUG ===========================\n");
-
-	free(gram);
-	return decoded;
-}
-
-char* decodeBytesChar(char* src, int len, int bytes, char* buf, char* exp_, char* mod_) {
-	bignum* exp = bignum_init();
-	bignum_fromstring(exp, exp_);
-
-	bignum* mod = bignum_init();
-	bignum_fromstring(mod, mod_);
-
-	char* res = decodeBytes(src, len, bytes, exp, mod);
-	int pck_num = len / (sizeof(word) / sizeof(char)) / BLOCK_LENGTH;
-	int decoded_len = pck_num * bytes;
-	memcpy(buf, res, decoded_len);
-	free(res);
-
-	// printf("============================== CDEBUG ===========================\n");
-	// printf("len: %d\n", len);
-	// printf("bytes: %d\n", bytes);
-	// printf("exp: %s\n", exp_);
-	// printf("mod: %s\n", mod_);
-	// printf("result: %s\n", res);
-	// printf("============================== CDEBUG ===========================\n");
-
-	bignum_deinit(exp);
-	bignum_deinit(mod);
-
-	return res;
-}
-
-void gen_rsa_key(bignum** pub_exp, bignum** pub_mod, bignum** priv_exp, bignum** priv_mod, int* bytes) {
-	bignum *p = bignum_init(), *q = bignum_init(), *n = bignum_init();
-	bignum *phi = bignum_init(), *e = bignum_init(), *d = bignum_init();
-	bignum *temp1 = bignum_init(), *temp2 = bignum_init();
-	bignum *bbytes = bignum_init(), *shift = bignum_init();
-
-	*pub_exp = bignum_init();
-	*pub_mod = bignum_init();
-	*priv_exp = bignum_init();
-	*priv_mod = bignum_init();
-	
-	randPrime(FACTOR_DIGITS, p);
-	// printf("Got first prime factor\n");
-	
-	randPrime(FACTOR_DIGITS, q);
-	// printf("Got second prime factor\n");
-	
-	bignum_multiply(n, p, q);
-	// printf("Got modulus\n");
-	
-	bignum_subtract(temp1, p, &NUMS[1]);
-	bignum_subtract(temp2, q, &NUMS[1]);
-	bignum_multiply(phi, temp1, temp2); /* phi = (p - 1) * (q - 1) */
-	// printf("Got totient\n");
-	
-	randExponent(phi, EXPONENT_MAX, e);
-	// printf("Chose public exponent\n");
-	// printf("Got public key\n");
-	bignum_copy(e, *pub_exp);
-	bignum_copy(n, *pub_mod);
-	
-	bignum_inverse(e, phi, d);
-
-	// printf("Got private key\n");
-	bignum_copy(d, *priv_exp);
-	bignum_copy(n, *priv_mod);
-
-	*bytes = -1;
-	bignum_fromint(shift, 1 << 8);
-	bignum_fromint(bbytes, 1);
-	while(bignum_less(bbytes, n)) {
-		bignum_imultiply(bbytes, shift);
-		(*bytes)++;
-	}
-
-	bignum_deinit(p);
-	bignum_deinit(q);
-	bignum_deinit(n);
-	bignum_deinit(phi);
-	bignum_deinit(e);
-	bignum_deinit(d);
-	bignum_deinit(bbytes);
-	bignum_deinit(shift);
-	bignum_deinit(temp1);
-	bignum_deinit(temp2);
-}
-
-int get_encode_info(int len, int bytes, int* pck_num) {
-	*pck_num = (len + bytes - 1) / bytes;
-	return (*pck_num * bytes);
-}
-
-int get_decode_info(int len, int bytes, int* pck_num) {
-	int block_length = (sizeof(int) / sizeof(char)) * BLOCK_LENGTH;
-	*pck_num = (len + block_length - 1) / block_length;
-	return (block_length - (*pck_num * block_length - len)) / (sizeof(int) / sizeof(char));
-}
