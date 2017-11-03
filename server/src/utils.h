@@ -41,7 +41,8 @@ struct ServerState
   int thread;
   int encrypt;
   int bytes;
-  char hip[32];
+  char lip[32];
+  char rip[32];
   bignum* pub_exp;
   bignum* pub_mod;
   bignum* priv_exp;
@@ -66,7 +67,7 @@ int send_file(int des_fd, int src_fd, struct ServerState* state);
 int send_file_mt(int des_fd, int src_fd, struct ServerState* state);
 int connect_by_mode(struct ServerState* state);
 int parse_addr(char* arg, char* ip_buf);
-int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
+int parse_argv(int argc, char** argv, char* lip, char* hport, char* root);
 int get_random_port(int* p1, int* p2);
 int recv_file(int des_fd, int src_fd, struct ServerState* state, int file_sz);
 int close_connections(struct ServerState* state);
@@ -76,5 +77,6 @@ void str_lower(char* str);
 void str_replace(char* str, char src, char des);
 void split_command(char* message, char* command, char* arg);
 void strip_crlf(char* uname);
+void get_conn_info(int connfd, char* lip, char* rip);
 
 #endif

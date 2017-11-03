@@ -148,7 +148,7 @@ int command_port(struct ServerState* state, char* arg)
 
 int command_pasv(struct ServerState* state)
 {
-  char* hip = state->hip;
+  char* lip = state->lip;
   struct sockaddr_in* addr = &(state->target_addr);
 
   if ((state->listen_fd = socket(AF_INET, SOCK_STREAM,  IPPROTO_TCP)) == -1) {
@@ -157,8 +157,6 @@ int command_pasv(struct ServerState* state)
     send_msg(state, RES_REJECT_PASV);
     return -1;
   }
-
-
 
   memset(addr, 0, sizeof(*addr));
   addr->sin_family = AF_INET;
@@ -187,11 +185,11 @@ int command_pasv(struct ServerState* state)
     return -1;
   }
 
-  char hip_cp[32] = "";
-  strcpy(hip_cp, hip);
-  str_replace(hip_cp, '.', ',');
+  char lip_cp[32] = "";
+  strcpy(lip_cp, lip);
+  str_replace(lip_cp, '.', ',');
   char buffer[32] = "";
-  sprintf(buffer, RES_ACCEPT_PASV, hip_cp, p1, p2);
+  sprintf(buffer, RES_ACCEPT_PASV, lip_cp, p1, p2);
   send_msg(state, buffer);
   state->trans_mode = PASV_MODE;
 

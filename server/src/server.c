@@ -17,7 +17,7 @@
 
 #define COMMAND_BUF_SIZE 4096
 
-char hip[32] = "";
+char lip[32] = "";
 int hport;
 int listenfd;
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   // parse arguments
   char hport_str[16];
   char root_dir[64];
-  parse_argv(argc, argv, hip, hport_str, root_dir);
+  parse_argv(argc, argv, lip, hport_str, root_dir);
   hport = atoi(hport_str);
   if (chdir(root_dir) == -1) {
     sprintf(error_buf, ERROR_PATT, "chdir", "main");
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 	}
 
   printf("FTP server start running\n");
-  printf("IP address %s\n", hip);
+  printf("IP address %s\n", lip);
   printf("port number %d\n", hport);
   getcwd(root_dir, sizeof(root_dir));
   printf("working directory %s\n", root_dir);
@@ -122,7 +122,9 @@ int serve(int connfd, int seed)
   state.pub_mod = NULL;
   state.priv_exp = NULL;
   state.priv_mod = NULL;
-  strcpy(state.hip, hip);
+
+  get_conn_info(connfd, state.lip, state.rip);
+  printf("local ip %s, remote ip %s\n", state.lip, state.rip);
 
   int c_code = 0;
   int len = 0;

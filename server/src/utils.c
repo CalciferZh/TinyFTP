@@ -419,9 +419,9 @@ int parse_addr(char* arg, char* ip)
   // // return 0;
 }
 
-int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
+int parse_argv(int argc, char** argv, char* lip, char* hport, char* root)
 {
-  hip[0] = '\0';
+  lip[0] = '\0';
   hport[0] = '\0';
   root[0] = '\0';
   static struct option opts[] = {
@@ -435,7 +435,7 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
   while ((opt = getopt_long(argc, argv, "a:p::r::", opts, NULL)) != -1) {
     switch (opt) {
       case 'a':
-        strcpy(hip, optarg);
+        strcpy(lip, optarg);
         break;
 
       case 'p':
@@ -465,8 +465,8 @@ int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
     strcpy(root, "/tmp");
   }
 
-  if (strlen(hip) == 0) {
-    strcpy(hip, "127.0.0.1");
+  if (strlen(lip) == 0) {
+    strcpy(lip, "127.0.0.1");
   }
 
   return 0;
@@ -504,3 +504,13 @@ int get_len_after_encoding(int len, int bytes)
   return pck_num * BLOCK_LENGTH * (sizeof(int) / sizeof(char));
 }
 
+void get_conn_info(int connfd, char* lip, char* rip)
+{
+  struct sockaddr_in local, remote;
+  socklen_t llen = sizeof(local);
+  socklen_t rlen = sizeof(remote);
+  getsockname(connfd, (struct sockaddr *)&local, &llen);
+  getpeername(connfd, (struct sockaddr *)&remote, &rlen);
+  inet_ntop(AF_INET, &local.sin_addr, lip, 32);
+  inet_ntop(AF_INET, &remote.sin_addr, rip, 32);
+}
