@@ -7,6 +7,14 @@
 #include <string.h>
 #include <limits.h>
 
+/**
+ * Basic limb type. Note that some calculations rely on unsigned overflow wrap-around of this type.
+ * As a result, only unsigned types should be used here, and the RADIX, HALFRADIX above should be
+ * changed as necessary. Unsigned integer should probably be the most efficient word type, and this
+ * is used by GMP for example.
+ */
+typedef unsigned int word;
+
 /* Accuracy with which we test for prime numbers using Solovay-Strassen algorithm.
  * 20 Tests should be sufficient for most largish primes */
 #define ACCURACY 20
@@ -27,14 +35,7 @@
 
 #define BLOCK_SIZE  82
 #define BLOCK_LENGTH  21
-
-/**
- * Basic limb type. Note that some calculations rely on unsigned overflow wrap-around of this type.
- * As a result, only unsigned types should be used here, and the RADIX, HALFRADIX above should be
- * changed as necessary. Unsigned integer should probably be the most efficient word type, and this
- * is used by GMP for example.
- */
-typedef unsigned int word;
+#define BLOCK_LENGTH_BYTES (int)(BLOCK_LENGTH * sizeof(int) / sizeof(char))
 
 /**
  * Structure for representing multiple precision integers. This is a base "word" LSB

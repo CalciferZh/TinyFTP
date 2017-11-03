@@ -128,8 +128,9 @@ int serve(int connfd, int seed)
   int len = 0;
   char message[COMMAND_BUF_SIZE];
   char arg[COMMAND_BUF_SIZE];
+  int flag;
 
-  send_msg(&state, RES_READY);
+  flag = send_msg(&state, RES_READY);
 
   // loop routine
   while ((len = read_msg(&state, message))) {
@@ -137,7 +138,7 @@ int serve(int connfd, int seed)
     c_code = parse_command(message, arg);
 
     if (!state.logged && c_code != USER_CODE && c_code != PASS_CODE) {
-      send_msg(&state, RES_WANTUSER);
+      flag = send_msg(&state, RES_WANTUSER);
       continue;
     }
 
@@ -151,7 +152,7 @@ int serve(int connfd, int seed)
         break;
 
       case XPWD_CODE:
-        send_msg(&state, RES_WANTUSER);
+        flag = send_msg(&state, RES_WANTUSER);
         break;
 
       case QUIT_CODE:
@@ -173,9 +174,10 @@ int serve(int connfd, int seed)
 
       case STOR_CODE:
         command_stor(&state, arg);
+        break;
 
       case SYST_CODE:
-        send_msg(&state, RES_SYSTEM);
+        flag = send_msg(&state, RES_SYSTEM);
         break;
 
       case TYPE_CODE:
@@ -228,6 +230,11 @@ int serve(int connfd, int seed)
     }
 
     memset(message, 0, COMMAND_BUF_SIZE);
+
+    if (flag == -1) {
+      printf("remote disconnected\n");
+      break;
+    }
   }
 
   close(state.command_fd);

@@ -33,8 +33,9 @@ class Client(object):
     self.rsalib.encodeBytesChar.restype = ctypes.c_char_p
     self.pub_exp = None
     self.pub_mod = None
-    self.blocksize = 84 # magic number related to server
+    self.blocklength = 84 # magic number related to RSA
     self.bts = 82 # magic number related to server
+    self.send_every = 5376 # a multiple of blocklength
     self.uname = ''
     self.pwd = ''
     self.thread_num = 1
@@ -42,13 +43,13 @@ class Client(object):
 
   def zero_padding(self, data):
     current = len(data)
-    target = int(math.ceil(current / self.blocksize) * self.blocksize)
+    target = int(math.ceil(current / self.blocklength) * self.blocklength)
     pad = "\0" * (target - current)
     data += bytes(pad, encoding='ascii')
     return data
 
   def decode(self, msg):
-    decoded_length = math.ceil((len(msg) / self.blocksize)) * self.bts
+    decoded_length = math.ceil((len(msg) / self.blocklength)) * self.bts
     # print('decoded length should be %d bytes' % decoded_length)
     buf = (ctypes.c_byte * decoded_length)()
     self.rsalib.decodeBytesChar(
@@ -63,7 +64,8 @@ class Client(object):
     return ret
 
   def encode(self, msg):
-    encoded_length = math.ceil((len(msg) / self.bts)) * self.blocksize
+    encoded_length = math.ceil((len(msg) / self.bts)) * self.blocklength
+    print('after encoding: %d' % encoded_length)
     buf = (ctypes.c_byte * encoded_length)()
     self.rsalib.encodeBytesChar(
       msg,
@@ -118,7 +120,7 @@ class Client(object):
     if not data:
       return None
     read += len(data)
-    while read % self.blocksize != 0:
+    while read % self.blocklength != 0:
       new_read = sock.recv(self.buf_size)
       if not new_read:
         return None
@@ -404,20 +406,28 @@ class Client(object):
 
   def command_send(self, arg):
     remote, local = self.extract_rl(arg)
+    total = os.path.getsize(local)
     elapse = time.time()
-    data_sock = self.data_connect('STOR ' + remote)
+    if self.encrypt:
+      data_sock = self.data_connect('STOR %s %d' % (remote, total))
+    else:
+      data_sock = self.data_connect('STOR ' + remote)
     if data_sock:
       with open(local, 'rb') as f:
         data = f.read()
         if self.encrypt:
           data = self.encode(data)
-        data_sock.sendall(data)
+          print('%d bytes to send' % len(data))
+          print('each packet %d bytes' % self.send_every)
+          for pt in range(0, len(data), self.send_every):
+            data_sock.sendall(data[pt:pt+self.send_every])
+        else:
+          data_sock.sendall(data)
       data_sock.close()
       code, res = self.recv()
       print(res)
-      total = os.path.getsize(local)
       elapse = time.time() - elapse
-      print('%dkb in %f seconds, %fkb/s in avg' % (total, elapse, total/elapse/1e3))
+      print('%dkb in %f seconds, %fkb/s in avg' % (total / 1000, elapse, total/elapse/1e3))
     else:
       print('Error in Client.command_send: no data_sock')
 

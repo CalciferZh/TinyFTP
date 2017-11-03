@@ -259,6 +259,15 @@ int command_retr(struct ServerState* state, char* path)
 int command_stor(struct ServerState* state, char* path)
 {
   int des_fd;
+  int file_size = -1;
+  char path_buf[256];
+  char length_buf[256];
+  if (state->encrypt) { // one more arg for file size
+    split_command(path, path_buf, length_buf);
+    strcpy(path, path_buf);
+    file_size = atoi(length_buf);
+  }
+
   if ((des_fd = open(path, O_WRONLY | O_CREAT)) == 0) {
     send_msg(state, RES_TRANS_NCREATE);
     return -1;
@@ -270,7 +279,7 @@ int command_stor(struct ServerState* state, char* path)
 
   send_msg(state, RES_TRANS_START);
   printf("start receiving...\n");
-  if (recv_file(des_fd, state->data_fd, state) == 0) {
+  if (recv_file(des_fd, state->data_fd, state, file_size) == 0) {
     send_msg(state, RES_TRANS_SUCCESS);
   } else {
     send_msg(state, RES_TRANS_FAIL);
