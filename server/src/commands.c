@@ -80,8 +80,7 @@ int parse_command(char* message, char* arg)
 int command_user(struct ServerState* state, char* uname)
 {
   int ret = 0;
-  //if (strcmp(uname, USER_NAME) == 0) {
-  if (1) {
+  if (strcmp(uname, USER_NAME) == 0) {
     send_msg(state, RES_ACCEPT_USER);
     ret = 1;
   } else {
