@@ -28,7 +28,7 @@ class Client(object):
     self.lport = None
     self.mode = 'pasv'
     self.append = False
-    self.encrypt = False
+    self.crypt = False
     self.rsalib = ctypes.CDLL('./librsa.so')
     self.rsalib.decodeBytesChar.restype = ctypes.c_char_p
     self.rsalib.encodeBytesChar.restype = ctypes.c_char_p
@@ -49,7 +49,7 @@ class Client(object):
     data += bytes(pad, encoding='ascii')
     return data
 
-  def decode(self, msg):
+  def decrypt(self, msg):
     decoded_length = math.ceil((len(msg) / self.blocklength)) * self.bts
     # print('decoded length should be %d bytes' % decoded_length)
     buf = (ctypes.c_byte * decoded_length)()
@@ -64,7 +64,7 @@ class Client(object):
     ret = bytearray(buf)
     return ret
 
-  def encode(self, msg):
+  def encrypt(self, msg):
     encoded_length = math.ceil((len(msg) / self.bts)) * self.blocklength
     # print('after encoding: %d' % encoded_length)
     buf = (ctypes.c_byte * encoded_length)()
@@ -115,7 +115,7 @@ class Client(object):
     print('remote: %s local: %s' % (remote, local))
     return remote, local
 
-  def recv_block_decode(self, sock):
+  def recv_block_decrypt(self, sock):
     read = 0
     data = sock.recv(self.buf_size)
     if not data:
@@ -128,14 +128,14 @@ class Client(object):
       data += new_read
       read += len(data)
     # print('start decoding %d bytes...' % read)
-    return self.decode(data)
+    return self.decrypt(data)
 
   def send(self, msg, cmdsk=None):
     if not cmdsk:
       cmdsk = self.sock
     msg = msg.strip() + '\r\n'
-    if self.encrypt:
-      msg = self.encode(bytes(msg, encoding='ascii'))
+    if self.crypt:
+      msg = self.encrypt(bytes(msg, encoding='ascii'))
     else:
       msg = bytes(msg, encoding='ascii')
     cmdsk.sendall(msg)
@@ -144,8 +144,8 @@ class Client(object):
     if not cmdsk:
       cmdsk = self.sock
     res = None
-    if self.encrypt:
-      res = self.recv_block_decode(cmdsk)
+    if self.crypt:
+      res = self.recv_block_decrypt(cmdsk)
     else:
       res = cmdsk.recv(self.buf_size)
     res = res.decode('ascii').strip('\r\n\0')
@@ -331,16 +331,16 @@ class Client(object):
       else:
         f = open(local, 'wb')
       
-      if self.encrypt:
+      if self.crypt:
         written = 0
-        data = self.recv_block_decode(data_sock)
+        data = self.recv_block_decrypt(data_sock)
         while data:
           new_recv = len(data)
           to_write = new_recv if new_recv + written <= file_size else file_size - written
           f.write(data[:to_write])
           written += to_write
           # print('written %d bytes...' % to_write)
-          data = self.recv_block_decode(data_sock)
+          data = self.recv_block_decrypt(data_sock)
       else:
         file_size = 0
         data = data_sock.recv(self.buf_size)
@@ -359,7 +359,7 @@ class Client(object):
       print('Error in Client.command_recv: no data_sock')
 
   def command_multirecv(self, arg):
-    if self.encrypt:
+    if self.crypt:
       print('multirecv is not supported in encrypt mode')
       return
     remote, local = self.extract_rl(arg)
@@ -412,15 +412,15 @@ class Client(object):
     total = os.path.getsize(local)
     print('%d bytes to go' % total)
     elapse = time.time()
-    if self.encrypt:
+    if self.crypt:
       data_sock = self.data_connect('STOR %s %d' % (remote, total))
     else:
       data_sock = self.data_connect('STOR ' + remote)
     if data_sock:
       with open(local, 'rb') as f:
         data = f.read()
-        if self.encrypt:
-          data = self.encode(data)
+        if self.crypt:
+          data = self.encrypt(data)
           # print('%d bytes to send' % len(data))
           # print('each packet %d bytes' % self.send_every)
           for pt in range(0, len(data), self.send_every):
@@ -529,7 +529,7 @@ class Client(object):
 
   def command_port(self, arg):
     self.mode = 'port'
-    print('switch to part mode')
+    print('switched to port mode')
     print('ip address %s' % self.lip)
 
   def command_mult(self, arg):
@@ -537,16 +537,16 @@ class Client(object):
     print(res)
 
   def command_crypt(self, arg):
-    if self.encrypt:
+    if self.crypt:
       self.send('ENCR')
-      self.encrypt = False
+      self.crypt = False
       code, res = self.recv()
       print(res)
     else:
       code, res = self.xchg('ENCR')
       # print(res)
       if code == 2:
-        self.encrypt = True
+        self.crypt = True
         self.pub_exp, self.pub_mod, self.bts = res.split()[1].split(',')
         self.bts = int(self.bts)
         code, res = self.recv()
