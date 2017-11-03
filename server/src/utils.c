@@ -192,24 +192,24 @@ int recv_file(int des_fd, int src_fd, struct ServerState* state, int file_sz)
       printf("error in recv_file: invalid file size\n");
       return -1;
     }
-    printf("ready to receive %d bytes\n", file_sz);
+    // printf("ready to receive %d bytes\n", file_sz);
     written = 0;
     stored = 0;
     while((rcvd = read(src_fd, buf, DATA_BUF_SIZE_SMALL)) > 0) {
-      printf("stored %d, new received %d\n", stored, rcvd);
+      // printf("stored %d, new received %d\n", stored, rcvd);
       memcpy(cache + stored, buf, rcvd);
       stored += rcvd;
-      printf("now store %d bytes\n", stored);
+      // printf("now store %d bytes\n", stored);
       to_decode = stored - (stored % BLOCK_LENGTH_BYTES);
-      printf("start decoding...\n");
+      // printf("start decoding...\n");
       middle = decodeBytes(cache, to_decode, state->bytes, state->priv_exp, state->priv_mod);
       decoded_len = to_decode / BLOCK_LENGTH_BYTES * BLOCK_SIZE;
-      printf("decode %d bytes to %d bytes\n", to_decode, decoded_len);
+      // printf("decode %d bytes to %d bytes\n", to_decode, decoded_len);
       to_write = (file_sz - written) > decoded_len ? decoded_len : (file_sz - written);
       flag = write(des_fd, middle, to_write);
-      printf("write %d bytes\n", to_write);
+      // printf("write %d bytes\n", to_write);
       written += to_write;
-      printf("%d bytes written in total\n", written);
+      // printf("%d bytes written in total\n", written);
       free(middle);
       if (flag == -1) {
         sprintf(error_buf, ERROR_PATT, "write", "recv_file");
@@ -219,13 +219,13 @@ int recv_file(int des_fd, int src_fd, struct ServerState* state, int file_sz)
       stored -= to_decode;
       memcpy(buf, cache + to_decode, stored);
       memcpy(cache, buf, stored);
-      printf("flushed cache\n");
+      // printf("flushed cache\n");
     }
     if (rcvd == 0) {
-      printf("to process final packet: by now written %d bytes, file size %d bytes\n", written, file_sz);
+      // printf("to process final packet: by now written %d bytes, file size %d bytes\n", written, file_sz);
       middle = decodeBytes(cache, stored, state->bytes, state->priv_exp, state->priv_mod);
       flag = write(des_fd, middle, file_sz - written);
-      printf("write last %d bytes\n", file_sz - written);
+      // printf("write last %d bytes\n", file_sz - written);
       free(middle);
       return 0;
     } else {

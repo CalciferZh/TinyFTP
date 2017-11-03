@@ -65,7 +65,7 @@ class Client(object):
 
   def encode(self, msg):
     encoded_length = math.ceil((len(msg) / self.bts)) * self.blocklength
-    print('after encoding: %d' % encoded_length)
+    # print('after encoding: %d' % encoded_length)
     buf = (ctypes.c_byte * encoded_length)()
     self.rsalib.encodeBytesChar(
       msg,
@@ -407,6 +407,7 @@ class Client(object):
   def command_send(self, arg):
     remote, local = self.extract_rl(arg)
     total = os.path.getsize(local)
+    print('%d bytes to go' % total)
     elapse = time.time()
     if self.encrypt:
       data_sock = self.data_connect('STOR %s %d' % (remote, total))
@@ -417,8 +418,8 @@ class Client(object):
         data = f.read()
         if self.encrypt:
           data = self.encode(data)
-          print('%d bytes to send' % len(data))
-          print('each packet %d bytes' % self.send_every)
+          # print('%d bytes to send' % len(data))
+          # print('each packet %d bytes' % self.send_every)
           for pt in range(0, len(data), self.send_every):
             data_sock.sendall(data[pt:pt+self.send_every])
         else:
