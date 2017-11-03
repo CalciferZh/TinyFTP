@@ -27,6 +27,20 @@ int main(int argc, char** argv) {
 	int connfd;
 	struct sockaddr_in addr;
 
+  // handle -port
+  int i;
+  char* arg;
+  char middle[128];
+  for (i = 0; i < argc; ++i) {
+    arg = argv[i];
+    if (arg[0] == '-' && arg[1] != '-') {
+      memcpy(middle, arg, strlen(arg));
+      argv[i] = malloc(strlen(argv[i]) + 2);
+      argv[i][0] = '-';
+      memcpy(argv[i] + 1, middle, strlen(middle));
+    }
+  }
+
   // parse arguments
   char hport_str[16];
   char root_dir[64];

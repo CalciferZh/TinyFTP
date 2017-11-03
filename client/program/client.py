@@ -34,7 +34,7 @@ class Client(object):
     self.pub_exp = None
     self.pub_mod = None
     self.blocksize = 84 # magic number related to server
-    self.bts = 94 # magic number related to server
+    self.bts = 82 # magic number related to server
     self.uname = ''
     self.pwd = ''
     self.thread_num = 1
@@ -49,6 +49,7 @@ class Client(object):
 
   def decode(self, msg):
     decoded_length = math.ceil((len(msg) / self.blocksize)) * self.bts
+    # print('decoded length should be %d bytes' % decoded_length)
     buf = (ctypes.c_byte * decoded_length)()
     self.rsalib.decodeBytesChar(
       msg,
@@ -65,7 +66,7 @@ class Client(object):
     encoded_length = math.ceil((len(msg) / self.bts)) * self.blocksize
     buf = (ctypes.c_byte * encoded_length)()
     self.rsalib.encodeBytesChar(
-      bytes(msg, encoding='ascii'),
+      msg,
       ctypes.c_int(len(msg)),
       ctypes.c_int(self.bts),
       buf,
@@ -123,6 +124,7 @@ class Client(object):
         return None
       data += new_read
       read += len(data)
+    # print('start decoding %d bytes...' % read)
     return self.decode(data)
 
   def send(self, msg, cmdsk=None):
@@ -130,7 +132,7 @@ class Client(object):
       cmdsk = self.sock
     msg = msg.strip() + '\r\n'
     if self.encrypt:
-      msg = self.encode(msg)
+      msg = self.encode(bytes(msg, encoding='ascii'))
     else:
       msg = bytes(msg, encoding='ascii')
     cmdsk.sendall(msg)
@@ -286,7 +288,7 @@ class Client(object):
         self.pwd = getpass.getpass('password: ')
         code, res = self.xchg('PASS ' + self.pwd)
         if code == 2: # login success
-          print('login successful as %s' % self.uname)
+          print('login successfully as %s' % self.uname)
           self.logged = True
           code, res = self.xchg('TYPE I')
           if code == 2: # use binay
@@ -327,6 +329,7 @@ class Client(object):
           to_write = new_recv if new_recv + written <= file_size else file_size - written
           f.write(data[:to_write])
           written += to_write
+          # print('written %d bytes...' % to_write)
           data = self.recv_block_decode(data_sock)
       else:
         file_size = 0

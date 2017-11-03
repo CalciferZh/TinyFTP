@@ -25,7 +25,7 @@
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
-#define BLOCK_SIZE  94
+#define BLOCK_SIZE  82
 #define BLOCK_LENGTH  21
 
 /**

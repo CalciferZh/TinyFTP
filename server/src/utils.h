@@ -21,6 +21,8 @@
 #include "rsa.h"
 
 #define ERROR_PATT             "Error %s() in %s()"
+// #define DATA_BUF_SIZE_SMALL 1974 // make it a multiple of BLOCK_SIZE
+#define DATA_BUF_SIZE_SMALL 5248 // make it a multiple of BLOCK_SIZE
 #define DATA_BUF_SIZE 8192
 #define DATA_BUF_SIZE_LARGE 1048576
 #define PORT_MODE 0
@@ -58,13 +60,13 @@ char error_buf[128];
 
 int send_msg(struct ServerState* state, char* str);
 int read_msg(struct ServerState* state, char* message);
-int send_file(int des_fd, int src_fd, int offset);
-int send_file_mt(int des_fd, int src_fd, int offset);
+int send_file(int des_fd, int src_fd, struct ServerState* state);
+int send_file_mt(int des_fd, int src_fd, struct ServerState* state);
 int connect_by_mode(struct ServerState* state);
 int parse_addr(char* arg, char* ip_buf);
 int parse_argv(int argc, char** argv, char* hip, char* hport, char* root);
 int get_random_port(int* p1, int* p2);
-int recv_file(int des_fd, int src_fd);
+int recv_file(int des_fd, int src_fd, struct ServerState* state);
 int close_connections(struct ServerState* state);
 int get_len_after_encoding(int len, int bytes);
 void write_thread(void* arg);
