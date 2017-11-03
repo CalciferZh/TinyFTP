@@ -443,7 +443,7 @@ class Client(object):
       data = ""
       packet = data_sock.recv(self.buf_size)
       while packet:
-        data += packet.decode('ascii').strip()
+        data += packet.decode('ascii')
         packet = data_sock.recv(self.buf_size)
       print(data)
       code, res = self.recv()
