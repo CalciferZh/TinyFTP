@@ -25,6 +25,7 @@ class Client(object):
     self.buf_size = 8192
     self.logged = False
     self.lip = None # local ip
+    self.lport = None
     self.mode = 'pasv'
     self.append = False
     self.encrypt = False
@@ -281,6 +282,8 @@ class Client(object):
       return
     self.sock = socket.socket()
     self.sock.connect((self.hip, self.hport))
+    self.lip, self.lport = self.sock.getsockname()
+    print('local ip %s, port %d' % (self.lip, self.lport))
     code, res = self.recv()
     print(res)
 
@@ -596,7 +599,7 @@ class Client(object):
       try:
         getattr(self, "command_%s" % cmd)(arg)
       except Exception as e:
-        # traceback.print_exc()
+        traceback.print_exc()
         if type(e) == AttributeError:
           print('invalid command')
         else:
