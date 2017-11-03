@@ -299,31 +299,44 @@ int close_connections(struct ServerState* state)
 
 int parse_addr(char* arg, char* ip)
 {
-  str_replace(arg, ',', '.');
 
-  int i = 0;
-  char* dot = arg;
-  for (i = 0; i < 4; ++i) {
-    dot = strchr(++dot, '.');
+  int a1, a2, a3, a4, p1, p2;
+  int i;
+  int len = strlen(arg);
+  for (i = 0; i < len; ++i) {
+    if (arg[i] >= '0' && arg[i] <= '9') {
+      break;
+    }
   }
 
-  // retrieve ip address
-  strncpy(ip, arg, (int)(dot - arg));
-  strcat(ip, "\0");
+  sscanf(arg + i, "%d,%d,%d,%d,%d,%d", &a1, &a2, &a3, &a4, &p1, &p2);
+  sprintf(ip, "%d.%d.%d.%d", a1, a2, a3, a4);
+  return p1 * 256 + p2;
 
-  // retrieve port 1
-  ++dot;
-  char* dot2 = strchr(dot, '.');
-  char buf[32];
-  strncpy(buf, dot, (int)(dot2 - dot));
-  strcat(buf, "\0");
-  int p1 = atoi(buf);
+  // str_replace(arg, ',', '.');
+  // int i = 0;
+  // char* dot = arg;
+  // for (i = 0; i < 4; ++i) {
+  //   dot = strchr(++dot, '.');
+  // }
 
-  //retrieve port 2
-  int p2 = atoi(strcpy(buf, dot2 + 1));
+  // // retrieve ip address
+  // strncpy(ip, arg, (int)(dot - arg));
+  // strcat(ip, "\0");
 
-  return (p1 * 256 + p2);
-  // return 0;
+  // // retrieve port 1
+  // ++dot;
+  // char* dot2 = strchr(dot, '.');
+  // char buf[32];
+  // strncpy(buf, dot, (int)(dot2 - dot));
+  // strcat(buf, "\0");
+  // int p1 = atoi(buf);
+
+  // //retrieve port 2
+  // int p2 = atoi(strcpy(buf, dot2 + 1));
+
+  // return (p1 * 256 + p2);
+  // // return 0;
 }
 
 int parse_argv(int argc, char** argv, char* hip, char* hport, char* root)
