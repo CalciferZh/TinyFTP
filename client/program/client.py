@@ -193,13 +193,18 @@ class Client(object):
       self.send(msg, cmdsk)
       if ip and port:
         data_sock = socket.socket()
-        data_sock.connect((ip, port))
+        try:
+          data_sock.connect((ip, port))
+        except Exception as e:
+          print(str(e))
+          data_sock.close()
+          return None
         code, res = self.recv(cmdsk)
         if verbose:
           print(res)
         if code != 1:
           data_sock.close()
-          data_sock = None;
+          return None
       else:
         print('Error in Client.data_connect: no ip or port')
     elif self.mode == 'port':
@@ -443,10 +448,13 @@ class Client(object):
         print(attr[len('command_'): ])
 
   def command_close(self, arg):
-    code, res = self.xchg('QUIT')
-    print(res)
-    self.sock.close()
-    self.__init__()
+    try:
+      code, res = self.xchg('QUIT')
+      print(res)
+    finally:
+      # close anyway
+      self.sock.close()
+      self.__init__()
 
   def command_bye(self, arg):
     if self.logged:
@@ -564,9 +572,12 @@ class Client(object):
     print(res)
     return code, res
 
+  def command_ip(self, arg):
+    self.lip = arg[0]
+    print('set local ip to %s' % self.lip)
+
   def run(self):
-    self.lip = socket.gethostbyname(socket.gethostname())
-    print('ftp client start, ip addr %s' % self.lip)
+    print('ftp client start')
     while self.running:
       cmd = input('ftp > ').split()
       arg = cmd[1:]
@@ -574,7 +585,7 @@ class Client(object):
       try:
         getattr(self, "command_%s" % cmd)(arg)
       except Exception as e:
-        traceback.print_exc()
+        # traceback.print_exc()
         if type(e) == AttributeError:
           print('invalid command')
         else:
