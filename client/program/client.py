@@ -597,6 +597,8 @@ class Client(object):
     print('ftp client start')
     while self.running:
       cmd = input('ftp > ').split()
+      if (len(cmd) == 0):
+        continue
       arg = cmd[1:]
       cmd = cmd[0]
       try:
