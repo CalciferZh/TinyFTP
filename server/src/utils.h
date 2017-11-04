@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <net/if.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <getopt.h>
 #include <errno.h>
 #include <ctype.h>
@@ -78,5 +79,6 @@ void str_replace(char* str, char src, char des);
 void split_command(char* message, char* command, char* arg);
 void strip_crlf(char* uname);
 void get_conn_info(int connfd, char* lip, char* rip);
+int dir_is_empty(char* path);
 
 #endif

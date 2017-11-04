@@ -502,3 +502,21 @@ void get_conn_info(int connfd, char* lip, char* rip)
   inet_ntop(AF_INET, &local.sin_addr, lip, 32);
   inet_ntop(AF_INET, &remote.sin_addr, rip, 32);
 }
+
+int dir_is_empty(char* path)
+{
+  int num = 0; 
+  DIR* dirp = opendir(path); 
+  while (dirp) { 
+    if (readdir(dirp) != NULL) {
+      ++num;
+    } else {
+      break;
+    }
+  }
+  closedir(dirp);
+  if (num == 2) {
+    return 1;
+  }
+  return 0;
+}

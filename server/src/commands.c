@@ -401,13 +401,18 @@ int command_cwd(struct ServerState* state, char* path)
 
 int command_rmd(struct ServerState* state, char* path)
 {
-  char cmd[32] = "rm -rf ";
-  strcat(cmd, path);
-  if (system(cmd) == 0) {
-    send_msg(state, RES_ACCEPT_RMD);
+  if (dir_is_empty(path)) {
+    char cmd[32] = "rm -rf ";
+    strcat(cmd, path);
+    if (system(cmd) == 0) {
+      send_msg(state, RES_ACCEPT_RMD);
+    } else {
+      send_msg(state, RES_REJECT_RMD);
+    }
   } else {
     send_msg(state, RES_REJECT_RMD);
   }
+
   return 0;
 }
 
