@@ -331,22 +331,45 @@ int command_list(struct ServerState* state, char* path, int is_long)
     return -1;
   }
 
-  send_msg(state, RES_TRANS_START);
-
-  char buf[256];
+  char buf[DATA_BUF_SIZE];
   if (is_long) {
     fgets(buf, sizeof(buf), fp); // remove the first line
   }
-  while (fgets(buf, sizeof(buf), fp)) {
-    strip_crlf(buf);
-    strcat(buf, "\r\n");
-    // if (state->encrypt) {
-    //   char* data = encodeBytes(buf, strlen(buf), state->priv_exp, state->priv_mod);
 
-    // } else {
-    write(state->data_fd, buf, strlen(buf));
-    // }
+  int fd;
+  char tmp_file_path[] = "ftp_server_command_list_temperory_file.ftpsrvtmp";
+  if (state->encrypt) {
+    fd = open(tmp_file_path, O_RDWR | O_CREAT);
+    while (fgets(buf, DATA_BUF_SIZE - 4, fp)) {
+      strip_crlf(buf);
+      strcat(buf, "\r\n");
+      if (writeall(fd, buf, strlen(buf)) < 0) {
+        sprintf(error_buf, ERROR_PATT, "write", "command_list");
+        perror(error_buf);
+        send_msg(state, RES_TRANS_FAIL);
+        close(fd);
+        pclose(fp);
+        return -1;
+      }
+      
+    }
+    lseek(fd, 0, SEEK_SET);
+    send_file(state->data_fd, fd, state);
+    close(fd);
+    remove(tmp_file_path);
+  } else {
+    while (fgets(buf, DATA_BUF_SIZE - 4, fp)) {
+      if (writeall(state->data_fd, buf, strlen(buf)) < 0) {
+        sprintf(error_buf, ERROR_PATT, "write", "command_list");
+        perror(error_buf);
+        send_msg(state, RES_TRANS_FAIL);
+        pclose(fp);
+        return -1;
+      }
+    }
   }
+
+  send_msg(state, RES_TRANS_START);
 
   printf("Command list finish transfer.\n");
   send_msg(state, RES_TRANS_SUCCESS);

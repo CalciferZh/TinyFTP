@@ -71,18 +71,6 @@ int send_file(int des_fd, int src_fd, struct ServerState* state)
   int remain = stat_buf.st_size - offset;
   printf("Start file transfer, %d bytes to send\n", remain);
 
-  // if (state->encrypt) {
-
-  // } else {
-  //   while ((fin_read = read(src_fd, buf, to_read)) > 0) {
-  //     if (write(des_fd, buf, fin_read) == -1) {
-  //       sprintf(error_buf, ERROR_PATT, "write", "send_file");
-  //       perror(error_buf);
-  //       return -1;
-  //     }
-  //   }
-  // }
-
   while (remain > 0) {
     if (state->encrypt) {
       to_read = remain < READ_FOR_SEND_BUF_SIZE ? remain : READ_FOR_SEND_BUF_SIZE;

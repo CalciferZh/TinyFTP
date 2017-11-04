@@ -443,12 +443,15 @@ class Client(object):
       arg = arg[0]
     data_sock = self.data_connect('LIST ' + arg)
     if data_sock:
-      data = ""
+      data = bytes()
       packet = data_sock.recv(self.buf_size)
       while packet:
-        data += packet.decode('ascii')
+        data += packet
         packet = data_sock.recv(self.buf_size)
-      print(data.strip())
+      if self.crypt:
+        data = self.decrypt(data)
+      data = data.decode('ascii').strip('\r\n\0')
+      print(data)
       code, res = self.recv()
       print(res)
       data_sock.close()
