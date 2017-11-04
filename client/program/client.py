@@ -450,7 +450,10 @@ class Client(object):
         packet = data_sock.recv(self.buf_size)
       if self.crypt:
         data = self.decrypt(data)
-      data = data.decode('ascii').strip('\r\n\0')
+      try:
+        data = data.decode('ascii').strip('\r\n\0')
+      except:
+        data = data.decode('utf8').strip('\r\n\0')
       print(data)
       code, res = self.recv()
       print(res)
